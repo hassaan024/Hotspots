@@ -1,25 +1,21 @@
+import React from "react";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import Navbar from "./components/Navbar";
+import MapPage from "./pages/MapPage";
+import PostsPage from "./pages/PostsPage";
+import { styles } from "./styles";
 
 export default function App() {
+  const [page, setPage] = React.useState("map");
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Hotspots</Text>
-      <Text style={styles.subtitle}>See what’s trending around you</Text>
-
-      <TouchableOpacity style={styles.button} onPress={() => {}}>
-        <Text style={styles.buttonText}>Get Started</Text>
-      </TouchableOpacity>
-
-      <StatusBar style="auto" />
+    <View style={styles.app}>
+      <StatusBar style="light" />
+      <View style={styles.content}>
+        {page === "map" ? <MapPage /> : <PostsPage />}
+      </View>
+      <Navbar current={page} onChange={setPage} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
-  title: { fontSize: 28, fontWeight: "bold", color: "#003087", marginBottom: 8 },
-  subtitle: { fontSize: 16, color: "#555", marginBottom: 20 },
-  button: { backgroundColor: "#dba734", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 },
-  buttonText: { color: "#000", fontWeight: "600" }
-});
