@@ -36,10 +36,15 @@ Add a new file to android folder 'local.properties' and add path to your sdk fil
 sdk.dir={Your SDK path}
 ```
 
-Now run the following command which will make an executable app on the emulator, this command may take some time for the first time. Once successfully run it you can excess the app even with the app not running on your terminal.
+Now run this command
 
 ```bash
 npx expo run:android
 ```
 
+```bash
+cd android
+./gradlew assembleRelease
+```
 
+This will make an executable app on the emulator, these commands may take some time for the first time. Once successfully run it you can excess the app even with the app not running on your terminal.
