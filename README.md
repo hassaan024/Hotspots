@@ -19,20 +19,27 @@ npm install
 ```bash
 npx expo start
 ```
-If emulator is open press 'a' on the terminal to open in the emulator. You can also open it on localhost with the link given in the terminal and should be able to see the app in the browser. 
+- Once the above command is run it should give a localhost link that you can use to see the app in your browser
+- To open it on emulator go to Android Studio "Actions" then "Virtual Device Manager" and run the device, then press 'a'on vs code terminal and select "proceed anonymously". This will open the app in the emulator. 
 
 ### How to package into an app on the emulator
 
-Add a new file to android folder 'local.properties' and add path to your sdk files. This path can be found in Android Studio -> SDK Manager. Insert the path
-
-sdk.dir={Your SDK path}
-
-Now run the following commands
+Run this command which will make some new folders in the app
 
 ```bash
 npx expo prebuild
+```
+
+Add a new file to android folder 'local.properties' and add path to your sdk files. This path can be found in Android Studio -> SDK Manager. Add the following line to your file, inserting your path instead
+
+```bash
+sdk.dir={Your SDK path}
+```
+
+Now run the following command which will make an executable app on the emulator, this command may take some time for the first time. Once successfully run it you can excess the app even with the app not running on your terminal.
+
+```bash
 npx expo run:android
 ```
 
-After successfully running them, an app should appear on the emulator running
 
