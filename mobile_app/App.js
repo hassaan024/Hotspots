@@ -4,7 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import Navbar from "./components/Navbar";
 import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
-import TestPage from "./pages/TestPage"
 import { styles } from "./styles";
 
 export default function App() {
