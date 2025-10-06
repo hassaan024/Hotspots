@@ -42,9 +42,27 @@ Now run this command
 npx expo run:android
 ```
 
+Make sure /mobile_app/app.json is the following
+``` json
+{
+  "expo": {
+    "name": "Hotspots",
+    "slug": "hotspots",
+    "android": {
+      "package": "com.yourname.hotspots"
+    },
+    "ios": {
+      "bundleIdentifier": "com.yourname.hotspots"
+    }
+  }
+}
+```
+
+
 ```bash
 cd android
 ./gradlew assembleRelease
+./gradlew installRelease
 ```
 
 This will make an executable app on the emulator, these commands may take some time for the first time. Once successfully run it you can excess the app even with the app not running on your terminal.
