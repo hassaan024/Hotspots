@@ -48,11 +48,40 @@ Make sure /mobile_app/app.json is the following
   "expo": {
     "name": "Hotspots",
     "slug": "hotspots",
-    "android": {
-      "package": "com.yourname.hotspots"
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "ios": {
+      "supportsTablet": true,
       "bundleIdentifier": "com.yourname.hotspots"
+    },
+    "android": {
+      "package": "com.yourname.hotspots",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "buildToolsVersion": "35.0.0"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "REQUIRE_LOGIN": true,
+      "API_BASE_URL": "http://10.0.2.2:8080",
+      "eas": {
+        "projectId": "replace-with-your-project-id-if-you-use-EAS"
+      }
     }
   }
 }
