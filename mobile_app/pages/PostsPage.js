@@ -1,98 +1,100 @@
-import React, { useState } from "react";
-import { View, Text, Image, StyleSheet, Dimensions, FlatList, Button } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, Image, Dimensions, FlatList, RefreshControl, ActivityIndicator } from "react-native";
+import { styles } from "../styles";
+import { listPosts, API_BASE } from "../components/api";
 
-const { height, width } = Dimensions.get("window");
 
-// Full dummy data (could be replaced with API later)
-const allPosts = [
-  { username: "john.doe", text: "Hello world!", image: "https://via.placeholder.com/400x600" },
-  { username: "charlie_19", text: "Today is Thursday", image: "https://via.placeholder.com/400x600" },
-  { username: "latechcoes", text: "Louisiana Tech", image: "https://via.placeholder.com/400x600" },
-  { username: "emma_23", text: "Nature vibes", image: "https://via.placeholder.com/400x600" },
-  { username: "alex99", text: "City lights", image: "https://via.placeholder.com/400x600" },
-  { username: "luna_star", text: "Ocean view", image: "https://via.placeholder.com/400x600" },
-  { username: "max_power", text: "Sunset", image: "https://via.placeholder.com/400x600" },
-  { username: "nina_k", text: "Coffee time", image: "https://via.placeholder.com/400x600" },
-];
 
-export default function PostPage() {
-  const [posts, setPosts] = useState(allPosts.slice(0, 3)); // initial 3 posts
-  const [loading, setLoading] = useState(false);
+function toImageUri(datapath) {
+  if (!datapath) return null;
+  if (/^https?:\/\//i.test(datapath)) return datapath;
+  if (datapath.startsWith("/")) return `${API_BASE}${datapath}`;
+  const clean = datapath.replace(/^\.?\//, "");
+  return `${API_BASE}/uploads/${clean}`;
+}
 
-  // Function to load more posts
-  const loadMorePosts = () => {
-    if (loading) return;
-    setLoading(true);
 
-    // Simulate network/API delay
-    setTimeout(() => {
-      const currentLength = posts.length;
-      const nextPosts = allPosts.slice(currentLength, currentLength + 3); // load next 3
-      setPosts([...posts, ...nextPosts]);
+
+
+export default function PostsPage() {
+  const [posts, setPosts] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+  //TODO make scalable with window/device resolution
+   const width = 900;
+   const height = width-8;
+
+  const load = useCallback(async () => {
+    setErr(null);
+    try {
+      const data = await listPosts();//expects [postedby, posttype, datapath }]
+      setPosts(data);
+    } catch (e) {
+      setErr(String(e.message ?? e));
+    } finally {
       setLoading(false);
-    }, 1000);
-  };
+      setRefreshing(false);
+    }
+  }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={[styles.postWrapper, { height }]}>
-      <Text style={styles.username}>@{item.username}</Text>
-      <View style={styles.postBox}>
-        <Image source={{ uri: item.image }} style={styles.image} />
-      </View>
-      <Text style={styles.text}>
-        <Text style={styles.boldUsername}>{item.username} </Text>
-        {item.text}
-      </Text>
-    </View>
-  );
+    useEffect(() => { load(); }, [load]);
+
+    const renderItem = ({ item }) => {
+      let imgUri = toImageUri(item.datapath);
+        //console.log(item.postid)
+      return (
+        <View style={[styles.postWrapper, { height }]}>
+          <Text style={styles.username}>@{item.postedby}</Text>
+          <Text style={styles.text}>
+            <Text style={styles.boldUsername}>Example Title</Text>{" "}
+          </Text>
+          <View style={styles.postBox}>
+            <Image
+              source={{ uri: imgUri }}
+              style={{ width: "100%", height: height, resizeMode: "center" }}
+            />
+          </View>
+        </View>
+      );
+    };
+    const getItemLayout = (_data, index) => ({
+      length: height,
+      offset: height * index,
+      index,
+    });
+
 
   return (
     <FlatList
       data={posts}
       renderItem={renderItem}
-      keyExtractor={(item, index) => index.toString()}
-      pagingEnabled
+      keyExtractor={(item) => String(item.postid)}
       showsVerticalScrollIndicator={false}
-      snapToAlignment="start"
-      decelerationRate="fast"
-      onEndReached={loadMorePosts}          // load more when near bottom
-      onEndReachedThreshold={0.5}          // triggers at 50% from bottom
-      ListFooterComponent={loading && <Text style={{ color: "white", textAlign: "center" }}>Loading...</Text>}
+      pagingEnabled={false}
+      snapToAlignment={undefined}
+      decelerationRate="normal"
+      getItemLayout={undefined}
+      removeClippedSubviews
+      initialNumToRender={6}
+      windowSize={7}
+      //contentContainerStyle={{ paddingTop: HEADER_HEIGHT, paddingBottom: NAVBAR_HEIGHT + 12 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { setRefreshing(true); load(); }}
+          tintColor="#fff"
+        />
+      }
+      ListEmptyComponent={
+        <Text style={{ color: "#fff", textAlign: "center", marginTop: 24 }}>
+          No posts yet.
+        </Text>
+      }
     />
   );
-}
+  }
 
-const styles = StyleSheet.create({
-  postWrapper: {
-    width,
-    backgroundColor: "#0B1D51",
-    padding: 10,
-  },
-  postBox: {
-    backgroundColor: "#102B57",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginVertical: 10,
-  },
-  username: {
-    color: "#fff",
-    fontWeight: "bold",
-    marginBottom: 5,
-    marginLeft: 5,
-  },
-  text: {
-    color: "#fff",
-    marginLeft: 5,
-  },
-  boldUsername: {
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  image: {
-    width: "100%",
-    height: height * 0.6,
-    resizeMode: "cover",
-  },
-});
- 
+
+
 

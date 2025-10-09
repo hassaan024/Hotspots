@@ -31,7 +31,7 @@ export default function LoginPage() {
 
     setBusy(true);
     try {
-      // Simulate a short network delay
+      //Simulate a short network delay
       await new Promise((r) => setTimeout(r, 400));
 
       const ok =
@@ -43,7 +43,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Set user in global auth and move to Map
+      //Set user in global auth and move to Map
       await login(username, password);
     } catch (e) {
       setError("Login failed. Please try again.");
@@ -55,10 +55,10 @@ export default function LoginPage() {
   return (
     <KeyboardAvoidingView
       style={[styles.app, { padding: 16}]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "android" ? "padding" : undefined}
     >
       <View style={[styles.screen, { justifyContent: "center" }]}>
-        <div></div>
+        <View/> //was <div></div> but it did not work on android
         <Text style={[styles.screenTitle, { textAlign: "center", marginBottom: 10 }]}>
           Welcome to Hotspots
         </Text>
