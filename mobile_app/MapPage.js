@@ -4,7 +4,7 @@ import { View, Text } from "react-native";
 import { styles } from "../styles";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = "AIzaSyByPE_DkBgzbVtxYj381CA0cdSg6w8W1Tw";
 const MAP_ID = "e2597d7067e6b124501ac533";
 const Uluru = { lat: -25.344, lng: 131.031 }; // Uluru
 
@@ -112,7 +112,7 @@ export default function MapPage() {
         // demo marker
         new AdvancedMarkerElement({ map, position: Uluru, title: "Uluru" });
 
-        // cluster array
+        // cluster your array
         const markers = locations.map((p) => new AdvancedMarkerElement({ map, position: p }));
         new MarkerClusterer({ markers, map });
       } catch (e) {
@@ -144,3 +144,5 @@ export default function MapPage() {
     </View>
   );
 }
+
+
