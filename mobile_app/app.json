@@ -18,7 +18,11 @@
     },
     "android": {
       "package": "com.yourname.hotspots",
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "buildToolsVersion": "35.0.0"
@@ -27,6 +31,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "REQUIRE_LOGIN": true,
+      "API_BASE_URL": "http://10.0.2.2:8080",
       "eas": {
         "projectId": "replace-with-your-project-id-if-you-use-EAS"
       }

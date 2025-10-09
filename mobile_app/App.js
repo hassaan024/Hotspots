@@ -1,21 +1,57 @@
 import React from "react";
-import { View } from "react-native";
+import { View, Platform, StatusBar as RNStatusBar } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import Constants from "expo-constants";
+
 import Navbar from "./components/Navbar";
 import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
+import LoginPage from "./pages/LoginPage";
+
 import { styles } from "./styles";
+import { AuthContext } from "./AuthContext";
 
 export default function App() {
-  const [page, setPage] = React.useState("map");
+  const [page, setPage] = React.useState("map"); // "map" | "posts"
+  const [user, setUser] = React.useState(null);
+
+  const REQUIRE_LOGIN = Constants.expoConfig?.extra?.REQUIRE_LOGIN ?? true;
+
+  const auth = React.useMemo(
+    () => ({
+      user,
+      login: async (username, _password) => {
+        setUser({ username });  // logged in
+        setPage("map");         // go to landing page
+      },
+      logout: () => {
+        setUser(null);
+        setPage("map");
+      },
+    }),
+    [user]
+  );
+
+  const showApp = !REQUIRE_LOGIN || !!user;
+
+  const topPad = Platform.OS === "android" ? (RNStatusBar.currentHeight || 0) : 0;
 
   return (
-    <View style={styles.app}>
-      <StatusBar style="light" />
-      <View style={styles.content}>
-        {page === "map" ? <MapPage /> : <PostsPage />}
+    <AuthContext.Provider value={auth}>
+      <View style={[styles.app, { paddingTop: topPad }]}>
+        <StatusBar style="light" />
+        {showApp ? (
+          <>
+            <View style={styles.content}>
+              {page === "map" && <MapPage />}
+              {page === "posts" && <PostsPage />}
+            </View>
+            <Navbar current={page} onChange={setPage} />
+          </>
+        ) : (
+          <LoginPage />
+        )}
       </View>
-      <Navbar current={page} onChange={setPage} />
-    </View>
+    </AuthContext.Provider>
   );
 }

@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useContext } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { styles } from "../styles";
+import { AuthContext } from "../AuthContext";
 
 export default function Navbar({ current, onChange }) {
+  const { logout } = useContext(AuthContext);
+
   return (
     <View style={styles.navbar}>
       <Text style={styles.brand}>Hotspots</Text>
@@ -34,6 +37,13 @@ export default function Navbar({ current, onChange }) {
           >
             Posts
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.navBtn, { marginLeft: 8, backgroundColor: "red" }]}
+          onPress={logout}
+        >
+          <Text style={styles.navBtnText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </View>
