@@ -112,7 +112,7 @@ export default function MapPage() {
         // demo marker
         new AdvancedMarkerElement({ map, position: Uluru, title: "Uluru" });
 
-        // cluster your array
+        // cluster array
         const markers = locations.map((p) => new AdvancedMarkerElement({ map, position: p }));
         new MarkerClusterer({ markers, map });
       } catch (e) {
