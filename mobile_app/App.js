@@ -21,7 +21,7 @@ export default function App() {
     () => ({
       user,
       login: async (username, _password) => {
-        setUser({ username });  // mark as logged in
+        setUser({ username });  // logged in
         setPage("map");         // go to landing page
       },
       logout: () => {
@@ -34,7 +34,6 @@ export default function App() {
 
   const showApp = !REQUIRE_LOGIN || !!user;
 
-  // Minimal top padding for Android status bar (since we're not using SafeAreaView)
   const topPad = Platform.OS === "android" ? (RNStatusBar.currentHeight || 0) : 0;
 
   return (

@@ -39,7 +39,6 @@ export default function Navbar({ current, onChange }) {
           </Text>
         </TouchableOpacity>
 
-        {/* Logout Button */}
         <TouchableOpacity
           style={[styles.navBtn, { marginLeft: 8, backgroundColor: "red" }]}
           onPress={logout}

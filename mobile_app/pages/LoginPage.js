@@ -43,7 +43,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Success: set user in global auth and move to Map
+      // Set user in global auth and move to Map
       await login(username, password);
     } catch (e) {
       setError("Login failed. Please try again.");
