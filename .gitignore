@@ -41,3 +41,6 @@ yarn-error.*
 /android
 
 /generated/prisma
+/sql_backend/src/uploads/
+/sql_backend/src/uploads/
+/sql_backend/src/uploads/

@@ -40,7 +40,7 @@ export default function Navbar({ current, onChange }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.navBtn, { marginLeft: 8, backgroundColor: "red" }]}
+          style={[styles.navBtn, { marginLeft: 8,backgroundColor: "#f54254" }]}
           onPress={logout}
         >
           <Text style={styles.navBtnText}>Logout</Text>

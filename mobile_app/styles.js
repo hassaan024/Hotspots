@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+
 const colors = {
   bg: "#0B0F14",          // app background
   panel: "#121821",       // cards/panels
@@ -77,7 +78,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.panel,
     borderRadius: 14,
-    padding: 16,
+    padding: 32,
     borderWidth: 1,
     borderColor: colors.panelBorder,
   },
@@ -90,4 +91,36 @@ export const styles = StyleSheet.create({
   screenSub: {
     color: colors.textDim,
   },
+  //everything below this is for the posts
+    postWrapper: {
+      width : "100%",
+      backgroundColor:colors.panelBorder,
+      padding: 10,
+    },
+    postBox: {
+      backgroundColor: colors.panel,
+      borderRadius: 10,
+      overflow: "hidden",
+      marginVertical: 10,
+
+    },
+    username: {
+      color: "#fff",
+      fontWeight: "bold",
+      marginBottom: 5,
+      marginLeft: 5,
+    },
+    text: {
+      color: "#fff",
+      marginLeft: 5,
+    },
+    boldUsername: {
+      fontWeight: "bold",
+      color: "#fff",
+    },
+    image: {
+      width: '100%',
+      height: 750,
+      resizeMode: 'cover',
+    },
 });

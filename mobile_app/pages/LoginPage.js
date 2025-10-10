@@ -23,27 +23,20 @@ export default function LoginPage() {
 
   async function handleLogin() {
     setError("");
-
     if (!username || !password) {
       setError("Please enter username and password.");
       return;
     }
-
     setBusy(true);
     try {
-      // Simulate a short network delay
       await new Promise((r) => setTimeout(r, 400));
-
       const ok =
         username.trim().toLowerCase() === HARDCODED_USERNAME &&
         password === HARDCODED_PASSWORD;
-
       if (!ok) {
         setError("Invalid credentials. Try admin / password123");
         return;
       }
-
-      // Set user in global auth and move to Map
       await login(username, password);
     } catch (e) {
       setError("Login failed. Please try again.");
@@ -54,11 +47,10 @@ export default function LoginPage() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.app, { padding: 16}]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={[styles.app, { padding: 16 }]}
+      behavior={Platform.OS === "android" ? "padding" : undefined}
     >
       <View style={[styles.screen, { justifyContent: "center" }]}>
-        <div></div>
         <Text style={[styles.screenTitle, { textAlign: "center", marginBottom: 10 }]}>
           Welcome to Hotspots
         </Text>
