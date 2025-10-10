@@ -10,9 +10,8 @@ import {
 } from "react-native";
 import { styles } from "../styles";
 import { AuthContext } from "../AuthContext";
+import { loginUser } from "../components/api";
 
-const HARDCODED_USERNAME = "admin";
-const HARDCODED_PASSWORD = "password123";
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -21,44 +20,33 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin() {
-    setError("");
+   async function handleLogin() {
+     setError("");
+     if (!username || !password) {
+       setError("Please enter username and password.");
+       return;
+     }
+     setBusy(true);
+     try {
+     //Simulate a short network delay
+     await new Promise((r) => setTimeout(r, 400));
 
-    if (!username || !password) {
-      setError("Please enter username and password.");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      //Simulate a short network delay
-      await new Promise((r) => setTimeout(r, 400));
-
-      const ok =
-        username.trim().toLowerCase() === HARDCODED_USERNAME &&
-        password === HARDCODED_PASSWORD;
-
-      if (!ok) {
-        setError("Invalid credentials. Try admin / password123");
-        return;
-      }
-
-      //Set user in global auth and move to Map
-      await login(username, password);
-    } catch (e) {
-      setError("Login failed. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
+     const user = await loginUser({ username: username.trim(), password });
+     await login(user.username, password);
+     } catch (e) {
+     setError("Login failed. Please try again.");
+     setError(String(e.message || "Login failed. Please try again."));
+     } finally {
+        setBusy(false);
+     }
+   }
   return (
     <KeyboardAvoidingView
       style={[styles.app, { padding: 16}]}
       behavior={Platform.OS === "android" ? "padding" : undefined}
     >
       <View style={[styles.screen, { justifyContent: "center" }]}>
-        <View/> //was <div></div> but it did not work on android
+        <View/>
         <Text style={[styles.screenTitle, { textAlign: "center", marginBottom: 10 }]}>
           Welcome to Hotspots
         </Text>
@@ -128,11 +116,6 @@ export default function LoginPage() {
             <Text style={{ color: "#111827", fontWeight: "700" }}>Login</Text>
           )}
         </TouchableOpacity>
-
-        <Text style={{ color: "#9CA3AF", marginTop: 12, textAlign: "center" }}>
-          Try <Text style={{ color: "#E5E7EB" }}>admin</Text> /
-          <Text style={{ color: "#E5E7EB" }}> password123</Text>
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );

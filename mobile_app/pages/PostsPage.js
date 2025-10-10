@@ -52,7 +52,7 @@ export default function PostsPage() {
           <View style={styles.postBox}>
             <Image
               source={{ uri: imgUri }}
-              style={{ width: "100%", height: height, resizeMode: "center" }}
+              style={{ width: "100%", height: "100%", resizeMode: "center" }}
             />
           </View>
         </View>

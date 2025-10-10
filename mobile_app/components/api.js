@@ -7,7 +7,7 @@ if (!API_BASE) {
   throw new Error('Set EXPO_PUBLIC_API_URL');
 }
 
-// Users
+//Users
 export async function listUsers() {
   const r = await fetch(`${API_BASE}/api/users`);
   if (!r.ok) throw new Error(`Users failed: ${r.status}`);
@@ -28,7 +28,20 @@ export async function createUser(input) {
   return r.json();
 }
 
-// Posts
+export async function loginUser({ username, password }) {
+  const r = await fetch(`${API_BASE}/api/users/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw new Error(text || `Login failed: ${r.status}`);
+  }
+  return r.json();
+}
+
+//Posts
 export async function listPosts() {
   const r = await fetch(`${API_BASE}/api/posts`);
   if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
@@ -44,7 +57,7 @@ export async function createPost(input) {
   return r.json();
 }
 
-// Maps
+//Maps
 export async function listLocations() {
   const r = await fetch(`${API_BASE}/api/posts/locations`);
   if (!r.ok) throw new Error(`Locations failed: ${r.status}`);

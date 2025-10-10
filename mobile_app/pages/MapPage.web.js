@@ -43,7 +43,7 @@ export default function MapPage() {
         if (typeof window === "undefined") return;
 
 
-        const points = await listLocations(); // [{ id, postedby, lat, lng, datapath }]
+        const points = await listLocations(); //[{ id, postedby, lat, lng, datapath }]
 
         await loadGoogle();
         const { Map, InfoWindow } = await google.maps.importLibrary("maps");

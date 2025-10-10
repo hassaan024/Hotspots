@@ -9,7 +9,7 @@ datasource db {
 }
 
 model users {
-  username String @id @db.VarChar(25)
-  email    String @unique(map: "users_pk") @db.VarChar(50)
-  password String @db.VarChar(255)
+  username      String   @id
+  email         String   @unique
+  passwordHash  String
 }
