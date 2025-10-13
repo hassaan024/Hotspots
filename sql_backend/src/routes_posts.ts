@@ -72,6 +72,7 @@ router.delete("/:postid", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+
 router.get("/:postid/with-user", async (req, res, next) => {
   try {
     const postid = Number(req.params.postid);
@@ -83,6 +84,7 @@ router.get("/:postid/with-user", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+//this handles uploads to the database
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, path.join(process.cwd(), "uploads")),
@@ -95,7 +97,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-//POST /api/posts/upload  format: file + postedby + posttype)
+//format: file + postedby + posttype)
 router.post("/upload", upload.single("file"), async (req, res, next) => {
   try {
     const { postedby, posttype = 0 } = req.body;

@@ -95,13 +95,15 @@ export const styles = StyleSheet.create({
     postWrapper: {
       width : "100%",
       backgroundColor:colors.panelBorder,
-      padding: 10,
+      padding: 16,
     },
     postBox: {
       backgroundColor: colors.panel,
-      borderRadius: 10,
-      overflow: "hidden",
+      borderRadius: 32,
       marginVertical: 10,
+      overflow: "hidden",
+
+
 
     },
     username: {

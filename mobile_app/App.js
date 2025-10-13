@@ -12,7 +12,7 @@ import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
 
 export default function App() {
-  const [page, setPage] = React.useState("map"); // "map" | "posts"
+  const [page, setPage] = React.useState("posts"); // "map" | "posts"
   const [user, setUser] = React.useState(null);
 
   const REQUIRE_LOGIN = Constants.expoConfig?.extra?.REQUIRE_LOGIN ?? true;
@@ -21,12 +21,12 @@ export default function App() {
     () => ({
       user,
       login: async (username, _password) => {
-        setUser({ username });  // logged in
-        setPage("map");         // go to landing page
+        setUser({ username });
+        setPage("posts");         // go to landing page
       },
       logout: () => {
         setUser(null);
-        setPage("map");
+        setPage("posts");
       },
     }),
     [user]
