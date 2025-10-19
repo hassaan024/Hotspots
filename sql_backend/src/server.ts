@@ -14,8 +14,16 @@ import postsRouter from './routes_posts';
 const app = express();
 const srcdir = path.join(process.cwd(), "src");
 
-app.use(cors({ origin: true, credentials: true }));
-
+app.use((req, res, next) => {
+  const end = res.end;
+  res.end = function (...args) {
+    const ms = Date.now() - (req.start || Date.now());
+    console.log(`[API] ${req.method} ${req.originalUrl} -> ${res.statusCode} in ${ms}ms`);
+    // @ts-ignore
+    end.apply(this, args);
+  };
+  next();
+});
 
 app.use(helmet());
 
@@ -23,6 +31,7 @@ app.use(helmet());
 app.use(express.json());
 
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 120 });
+
 app.use("/api", apiLimiter);
 
 
