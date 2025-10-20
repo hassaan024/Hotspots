@@ -9,13 +9,33 @@ import path from "node:path";
 
 import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
+import cors from 'cors';
 
-
+const WEB_ORIGIN = 'http://localhost:8082';
 const app = express();
+
+app.use(cors({
+  origin: WEB_ORIGIN,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  maxAge: 600,
+}));
+
+app.options('*', cors());
+
 const srcdir = path.join(process.cwd(), "src");
 
-app.use(cors({ origin: true, credentials: true }));
-
+app.use((req, res, next) => {
+  const end = res.end;
+  res.end = function (...args) {
+    const ms = Date.now() - (req.start || Date.now());
+    console.log(`[API] ${req.method} ${req.originalUrl} -> ${res.statusCode} in ${ms}ms`);
+    // @ts-ignore
+    end.apply(this, args);
+  };
+  next();
+});
 
 app.use(helmet());
 
@@ -23,6 +43,7 @@ app.use(helmet());
 app.use(express.json());
 
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 120 });
+
 app.use("/api", apiLimiter);
 
 
