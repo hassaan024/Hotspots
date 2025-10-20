@@ -30,10 +30,21 @@ export async function createUser(input) {
 
 export async function loginUser({ username, password }) {
   const r = await fetch(`${API_BASE}/api/users/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
+
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  body: JSON.stringify({ username, password }),
+});
+console.log('req url =', `${API_BASE}/api/users/login`);
+console.log('final url =', r.url, 'redirected =', r.redirected, 'status =', r.status);
+console.log('content-type =', r.headers.get('content-type'));
+const contentType = r.headers.get("content-type") || "";
+const text = await r.text();
+console.log('login status=', r.status, 'ctype=', contentType, 'first100=', text.slice(0,100));
+if (!contentType.includes("application/json")) {
+  throw new Error(`Expected JSON but got ${contentType}. Starts with: ${text.slice(0,120)}`);
+}
+return JSON.parse(text);
   if (!r.ok) {
     const text = await r.text().catch(() => "");
     throw new Error(text || `Login failed: ${r.status}`);
