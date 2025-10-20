@@ -7,12 +7,13 @@ import Navbar from "./components/Navbar";
 import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
 import LoginPage from "./pages/LoginPage";
+import ProfilePage from "./pages/ProfilePage"; // <-- Import ProfilePage
 
 import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
 
 export default function App() {
-  const [page, setPage] = React.useState("posts"); // "map" | "posts"
+  const [page, setPage] = React.useState("posts"); // "map" | "posts" | "profile"
   const [user, setUser] = React.useState(null);
 
   const REQUIRE_LOGIN = Constants.expoConfig?.extra?.REQUIRE_LOGIN ?? true;
@@ -45,6 +46,7 @@ export default function App() {
             <View style={styles.content}>
               {page === "map" && <MapPage />}
               {page === "posts" && <PostsPage />}
+              {page === "profile" && <ProfilePage />}
             </View>
             <Navbar current={page} onChange={setPage} />
           </>
