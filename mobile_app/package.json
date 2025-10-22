@@ -11,10 +11,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@googlemaps/markerclusterer": "^2.6.2",
     "@prisma/client": "^6.16.3",
     "@react-native-picker/picker": "2.11.1",
     "@vis.gl/react-google-maps": "^1.5.5",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "expo": "54.0.13",

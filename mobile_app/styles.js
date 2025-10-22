@@ -53,9 +53,23 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: colors.btnBg,
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 10,
+    backgroundColor: "#1F2937",
   },
   navBtnActive: {
-    backgroundColor: colors.accent,
+    backgroundColor: "#2a2a1f",
+    borderColor: "#FBBF24",
+    borderWidth: 1,
+    shadowColor: "#FBBF24",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   navBtnText: {
     color: colors.text,
@@ -95,13 +109,15 @@ export const styles = StyleSheet.create({
     postWrapper: {
       width : "100%",
       backgroundColor:colors.panelBorder,
-      padding: 10,
+      padding: 16,
     },
     postBox: {
       backgroundColor: colors.panel,
-      borderRadius: 10,
-      overflow: "hidden",
+      borderRadius: 32,
       marginVertical: 10,
+      overflow: "hidden",
+
+
 
     },
     username: {

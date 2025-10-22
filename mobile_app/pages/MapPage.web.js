@@ -1,24 +1,36 @@
 // pages/MapPage.js
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, Image as RNImage, ActivityIndicator } from "react-native";
 import { styles } from "../styles";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import { listLocations } from "../components/api";
+import { listLocations, API_BASE } from "../components/api";
+import { loadGoogleMaps } from "../utils/googleMapsLoader";
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 const MAP_ID = "e2597d7067e6b124501ac533";
+
+// Build a usable image URL from a post's datapath (mirrors PostsPage logic)
+function toImageUri(datapath) {
+  if (!datapath) return null;
+  if (/^https?:\/\//i.test(datapath)) return datapath;
+  if (datapath.startsWith("/")) return `${API_BASE}${datapath}`;
+  const clean = datapath.replace(/^\.?\//, "");
+  return `${API_BASE}/uploads/${clean}`;
+}
 
 const Uluru = { lat: -25.344, lng: 131.031 };
 
-function loadGoogle() {
-  if (window.google?.maps?.importLibrary) return Promise.resolve();
+/* function loadGoogle() {
+  // Resolve as soon as the Maps namespace exists (older loaders may not have importLibrary)
+  if (window.google?.maps) return Promise.resolve();
   return new Promise((resolve, reject) => {
     let script = document.querySelector('script[data-gmaps="1"]');
     if (!script) {
       script = document.createElement("script");
       script.src =
         `https://maps.googleapis.com/maps/api/js?key=${API_KEY}` +
-        `&v=beta&libraries=maps,marker&loading=async`;
+        `&v=weekly&libraries=marker&loading=async`;
       script.async = true;
       script.defer = true;
       script.dataset.gmaps = "1";
@@ -27,12 +39,13 @@ function loadGoogle() {
     script.addEventListener("load", resolve, { once: true });
     script.addEventListener("error", reject, { once: true });
   });
-}
+} */
 
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [error, setError] = useState(null);
+  const [loadingMaps, setLoadingMaps] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,34 +58,175 @@ export default function MapPage() {
 
         const points = await listLocations(); // [{ id, postedby, lat, lng, datapath }]
 
-        await loadGoogle();
-        const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-        if (cancelled) return;
+        await loadGoogleMaps();
+        if (cancelled || !mapRef.current) return;
+        // hide loading screen as soon as Google Maps JS is ready
+        setLoadingMaps(false);
+
+        // Work with or without importLibrary (older/newer loaders)
+        const { Map, InfoWindow } = google.maps;
+        let AdvancedMarkerElement =
+          google.maps.marker && google.maps.marker.AdvancedMarkerElement
+            ? google.maps.marker.AdvancedMarkerElement
+            : null;
+
+        if (!AdvancedMarkerElement && google.maps.importLibrary) {
+          const markerLib = await google.maps.importLibrary("marker");
+          AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
+        }
+
+        if (!Map || !InfoWindow || !AdvancedMarkerElement) {
+          throw new Error("Google Maps libraries not ready");
+        }
 
         const map = new Map(mapRef.current, {
-          center: Uluru, zoom: 6, mapId: MAP_ID, gestureHandling: "greedy",
-        });
+          center: Uluru, 
+          zoom: 6, 
+          mapId: MAP_ID, 
+          gestureHandling: "greedy",
+          disableDefaultUI: true,
+          zoomControl: true,
+          fullscreenControl: false,
+          mapTypeControl: false,
+/*           styles: [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+            {
+              featureType: "administrative.locality",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#d59563" }],
+            },
+            {
+              featureType: "poi",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#d59563" }],
+            },
+            {
+              featureType: "poi.park",
+              elementType: "geometry",
+              stylers: [{ color: "#263c3f" }],
+            },
+            {
+              featureType: "poi.park",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#6b9a76" }],
+            },
+            {
+              featureType: "road",
+              elementType: "geometry",
+              stylers: [{ color: "#38414e" }],
+            },
+            {
+              featureType: "road",
+              elementType: "geometry.stroke",
+              stylers: [{ color: "#212a37" }],
+            },
+            {
+              featureType: "road",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#9ca5b3" }],
+            },
+            {
+              featureType: "road.highway",
+              elementType: "geometry",
+              stylers: [{ color: "#746855" }],
+            },
+            {
+              featureType: "road.highway",
+              elementType: "geometry.stroke",
+              stylers: [{ color: "#1f2835" }],
+            },
+            {
+              featureType: "road.highway",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#f3d19c" }],
+            },
+            {
+              featureType: "transit",
+              elementType: "geometry",
+              stylers: [{ color: "#2f3948" }],
+            },
+            {
+              featureType: "transit.station",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#d59563" }],
+            },
+            {
+              featureType: "water",
+              elementType: "geometry",
+              stylers: [{ color: "#17263c" }],
+            },
+            {
+              featureType: "water",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#515c6d" }],
+            },
+            {
+              featureType: "water",
+              elementType: "labels.text.stroke",
+              stylers: [{ color: "#17263c" }],
+            },
+          ],
+        */});
+         
+
         mapInstanceRef.current = map;
 
         const infoWindow = new InfoWindow();
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
-            pos => { const user = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            pos => {
+              const user = { lat: pos.coords.latitude, lng: pos.coords.longitude };
               map.setCenter(user); map.setZoom(15);
-              new AdvancedMarkerElement({ map, position: user });
+              // Use a local asset for the user icon; resolve to a web-served URI via RN Image
+              let userIconUri = null;
+              try {
+                userIconUri = RNImage.resolveAssetSource(require("../assets/userIcon.png")).uri;
+              } catch (_e) {
+                userIconUri = null; // fallback below if resolution fails
+              }
+
+              const userImg = document.createElement("img");
+              userImg.src = userIconUri || "data:image/svg+xml;utf8," + encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><defs><radialGradient id="g" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#fca311"/></radialGradient></defs><circle cx="22" cy="22" r="22" fill="url(#g)"/><circle cx="22" cy="18" r="7" fill="#0b0b0f"/><path d="M8 36c3-7 10-10 14-10s11 3 14 10" fill="#0b0b0f"/></svg>'
+              );
+              userImg.alt = "You are here";
+              userImg.style.width = "44px";
+              userImg.style.height = "44px";
+              userImg.style.objectFit = "cover";
+              userImg.style.borderRadius = "50%";
+              userImg.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.45)";
+
+              new AdvancedMarkerElement({ map, position: user, content: userImg, title: "You are here" });
             },
             () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
           );
         }
 
-        const markers = points.map(p =>
-          new AdvancedMarkerElement({
+        // Create image-backed markers using AdvancedMarkerElement content, then cluster
+        const placeholder = `data:image/svg+xml;utf8,${encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="100%" height="100%" rx="20" ry="20" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
+        )}`;
+
+        const markers = points.map((p) => {
+          const img = document.createElement("img");
+          img.src = toImageUri(p.datapath) || placeholder;
+          img.alt = p.postedby ? `@${p.postedby}` : "post";
+          img.style.width = "40px";
+          img.style.height = "40px";
+          img.style.objectFit = "cover";
+          img.style.borderRadius = "50%";
+          img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
+
+          return new google.maps.marker.AdvancedMarkerElement({
             map,
             position: { lat: p.lat, lng: p.lng },
+            content: img,
             title: `@${p.postedby}`,
-          })
-        );
+          });
+        });
+
         new MarkerClusterer({ markers, map });
       } catch (e) {
         console.error(e);
@@ -89,13 +243,33 @@ export default function MapPage() {
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
       ) : (
-        <View
-          ref={mapRef}
-          style={[
-            styles.mapContainer || { flex: 1 },
-            { minHeight: 400, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#ddd" }
-          ]}
-        />
+        <View style={{ position: "relative" }}>
+          <View
+            ref={mapRef}
+            style={[
+              styles.mapContainer || { flex: 1 },
+              { minHeight: 500, borderRadius: 0, overflow: "hidden", borderWidth: 1, borderColor: "#ddd" }
+            ]}
+          />
+          {loadingMaps && (
+            <View
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.35)",
+                borderRadius: 12
+              }}
+            >
+              <ActivityIndicator size="large" color="#ffffff" />
+              <Text style={{ color: "#fff", marginTop: 12 }}>Loading map…</Text>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );

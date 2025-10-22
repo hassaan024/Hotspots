@@ -22,8 +22,8 @@ export default function PostsPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   //TODO make scalable with window/device resolution
-   const width = 900;
-   const height = width-8;
+   const width = 768;
+   const height = 1024;
 
   const load = useCallback(async () => {
     setErr(null);
@@ -42,17 +42,15 @@ export default function PostsPage() {
 
     const renderItem = ({ item }) => {
       let imgUri = toImageUri(item.datapath);
-        //console.log(item.postid)
+      console.log(item.datapath)
+      //console.log(item.postid)
       return (
-        <View style={[styles.postWrapper, { height }]}>
+        <View style={[styles.postWrapper, { height}]}>
           <Text style={styles.username}>@{item.postedby}</Text>
-          <Text style={styles.text}>
-            <Text style={styles.boldUsername}>Example Title</Text>{" "}
-          </Text>
           <View style={styles.postBox}>
             <Image
               source={{ uri: imgUri }}
-              style={{ width: "100%", height: height, resizeMode: "center" }}
+              style={{ width: "100%", height: height, resizeMode: "contain" }}
             />
           </View>
         </View>
