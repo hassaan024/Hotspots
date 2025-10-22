@@ -7,7 +7,7 @@ if (!API_BASE) {
   throw new Error('Set EXPO_PUBLIC_API_URL');
 }
 
-//Users
+// Users
 export async function listUsers() {
   const r = await fetch(`${API_BASE}/api/users`);
   if (!r.ok) throw new Error(`Users failed: ${r.status}`);
@@ -68,7 +68,7 @@ export async function createPost(input) {
   return r.json();
 }
 
-//Maps
+// Maps
 export async function listLocations() {
   const r = await fetch(`${API_BASE}/api/posts/locations`);
   if (!r.ok) throw new Error(`Locations failed: ${r.status}`);

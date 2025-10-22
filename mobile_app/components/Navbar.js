@@ -43,8 +43,8 @@ export default function Navbar({ current, onChange }) {
 
         {/* Profile */}
         <TouchableOpacity
-          style={[styles.navBtn, current === "profile" && styles.navBtnActive]}
-          onPress={() => onChange("profile")}
+          style={[styles.navBtn, { marginLeft: 8,backgroundColor: "#f54254" }]}
+          onPress={logout}
         >
           <Ionicons
             name={
