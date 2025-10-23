@@ -6,6 +6,7 @@ export async function listUsers() {
   if (!r.ok) throw new Error(`Users failed: ${r.status}`); 
   return r.json();
 }
+
 export async function getUser(username: string) {
   const r = await fetch(`${BASE}/api/users/${encodeURIComponent(username)}`, { credentials: "include" });
   if (!r.ok) throw new Error(`User not found: ${r.status}`);
