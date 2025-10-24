@@ -8,9 +8,15 @@ import path from "node:path";
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
-    const posts = await postsDb.posts.findMany({ orderBy: { postid: "desc" } });
+    const { postedby } = req.query as { postedby?: string };
+    const where = postedby ? { postedby } : undefined;
+
+    const posts = await postsDb.posts.findMany({
+      where,
+      orderBy: { postid: "desc" },
+    });
     res.json(posts);
   } catch (e) { next(e); }
 });

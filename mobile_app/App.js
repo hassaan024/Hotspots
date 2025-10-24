@@ -7,14 +7,15 @@ import Navbar from "./components/Navbar";
 import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
 import LoginPage from "./pages/LoginPage";
-import ProfilePage from "./pages/ProfilePage";
+import ProfilePage from "./pages/ProfilePage"; // <-- Import ProfilePage
 import CreatePostPage from "./pages/createPostPage";
+
 
 import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
 
 export default function App() {
-  const [page, setPage] = React.useState("posts"); // "map" | "posts" | "createPost" | "profile"
+  const [page, setPage] = React.useState("posts"); // "map" | "posts" | "profile"
   const [user, setUser] = React.useState(null);
 
   const REQUIRE_LOGIN = Constants.expoConfig?.extra?.REQUIRE_LOGIN ?? true;
@@ -24,7 +25,7 @@ export default function App() {
       user,
       login: async (username, _password) => {
         setUser({ username });
-        setPage("posts"); // go to landing page
+        setPage("posts");         // go to landing page
       },
       logout: () => {
         setUser(null);
@@ -35,26 +36,26 @@ export default function App() {
   );
 
   const showApp = !REQUIRE_LOGIN || !!user;
-  const topPad =
-    Platform.OS === "android" ? RNStatusBar.currentHeight || 0 : 0;
+
+  const topPad = Platform.OS === "android" ? (RNStatusBar.currentHeight || 0) : 0;
 
   return (
     <AuthContext.Provider value={auth}>
       <View style={[styles.app, { paddingTop: topPad }]}>
         <StatusBar style="light" />
-        {/* {showApp ? ( */}
-        <>
-          <View style={styles.content}>
-            {page === "map" && <MapPage />}
-            {page === "posts" && <PostsPage />}
-            {page === "createPost" && <CreatePostPage />}
-            {page === "profile" && <ProfilePage />}
-          </View>
-          <Navbar current={page} onChange={setPage} />
-        </>
-        {/* ) : (
+        {showApp ? (
+          <>
+            <View style={styles.content}>
+              {page === "map" && <MapPage />}
+              {page === "posts" && <PostsPage />}
+              {page === "createPost" && <CreatePostPage />}
+              {page === "profile" && <ProfilePage />}
+            </View>
+            <Navbar current={page} onChange={setPage} />
+          </>
+        ) : (
           <LoginPage />
-        )} */}
+        )}
       </View>
     </AuthContext.Provider>
   );

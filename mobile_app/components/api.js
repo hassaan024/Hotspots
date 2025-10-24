@@ -67,6 +67,12 @@ export async function createPost(input) {
   if (!r.ok) throw new Error(`Create post failed: ${r.status}`);
   return r.json();
 }
+export async function listUserPosts(username) {
+  const r = await fetch(`${API_BASE}/api/posts?postedby=${encodeURIComponent(username)}`);
+  if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
+  return r.json();
+}
+
 
 // Maps
 export async function listLocations() {
