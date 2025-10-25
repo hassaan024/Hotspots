@@ -115,7 +115,7 @@ export const styles = StyleSheet.create({
     borderRadius: 0,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#ddd", // keep explicit to match current MapPage usage
+    borderColor: "#ddd",
   },
   mapLoadingOverlay: {
     position: "absolute",
