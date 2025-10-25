@@ -33,7 +33,7 @@ export async function getPost(postid: number) {
   return r.json();
 }
 export async function createPost(input: {
-  postedby: string; posttype: number; datapath: string; location?: string | null; visibility?: number | null;
+  postedby: string; posttype: number; datapath: string; location: string; visibility?: number | null;
 }) {
   const r = await fetch(`${BASE}/api/posts`, {
     method: "POST",

@@ -12,7 +12,7 @@ import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
 import cors from 'cors';
 
-const WEB_ORIGIN = 'http://localhost:8082';
+const WEB_ORIGIN = 'http://localhost:8081';
 const app = express();
 
 app.use(cors({

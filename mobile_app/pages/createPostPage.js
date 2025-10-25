@@ -23,9 +23,10 @@ export default function CreatePostPage() {
   const [postedBanner, setPostedBanner] = useState(false);
     const { user: authUser } = useContext(AuthContext);
   // Location state
-  const [locationText, setLocationText] = useState("");
+      const [locationText, setLocationText] = useState("");
   const [locStatus, setLocStatus] = useState("idle"); // idle | fetching | done | error
   const [locError, setLocError] = useState("");
+  const [coords, setCoords] = useState({ lat: null, lng: null });
 
 const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.trim();
 
@@ -62,6 +63,7 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
     setLocError("");
     setLocStatus("fetching");
     setLocationText("");
+    setCoords({ lat: null, lng: null });
 
     try {
       if (Platform.OS === "web" && navigator?.geolocation) {
@@ -75,7 +77,7 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
                 reject(new Error("No coords"));
                 return;
               }
-              setLocationText(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+              setLocationText(`${latitude.toFixed(5)},${longitude.toFixed(5)}`);
               setLocStatus("done");
               resolve();
             },
@@ -160,12 +162,13 @@ async function onPost() {
     const payload = {
       postedby: authUser?.username ?? "",   // string
       posttype: 0,                          // number (adjust to your enum)
-      datapath: filename,                   // string (no "/uploads/", just the filename)
+      datapath: filename,
+      location: locationText                   // string (no "/uploads/", just the filename)
       // If you include location, make sure types match your server schema:
       // lat: typeof lat === "number" ? lat : undefined,
       // lng: typeof lng === "number" ? lng : undefined,
     };
-
+    console.log("payload →", payload);
     // guard against undefined required fields
     if (!payload.postedby) throw new Error("No username in AuthContext");
     if (typeof payload.posttype !== "number") throw new Error("posttype must be a number");

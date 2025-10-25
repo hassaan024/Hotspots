@@ -56,13 +56,13 @@ router.get("/:postid(\\d+)", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post("/", async (req, res, next) => {
-  try {
-    const data = createPostSchema.parse(req.body);
-    const created = await postsDb.posts.create({ data });
-    res.status(201).json(created);
-  } catch (e) { next(e); }
-});
+    router.post("/", async (req, res, next) => {
+      try {
+        const data = createPostSchema.parse(req.body);
+        const created = await postsDb.posts.create({ data });
+        res.status(201).json(created);
+      } catch (e) { next(e); }
+    });
 
 router.patch("/:postid", async (req, res, next) => {
   try {
@@ -106,8 +106,11 @@ const upload = multer({ storage });
 
 // THIS PATH MUST BE '/upload' because we will mount the router at '/api/posts'
 router.post("/upload", upload.single("file"), (req, res) => {
+
   if (!req.file) return res.status(400).json({ error: "No file" });
+  const location = req.body;
   res.json({ filename: req.file.filename }); // client expects { filename }
+
 });
 
 export default router;

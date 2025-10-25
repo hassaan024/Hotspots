@@ -88,7 +88,7 @@ export async function listFollowers(username) {
     credentials: "include",
   });
   if (!res.ok) throw new Error(`Failed to load followers (${res.status})`);
-  return await res.json(); // [{ follower, followedAt }, ...]
+  return await res.json(); // [{ follower,  }, ...]
 }
 
 export async function listFollowing(username) {
