@@ -8,6 +8,8 @@ import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage"; // <-- Import ProfilePage
+import CreatePostPage from "./pages/createPostPage";
+
 
 import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
@@ -46,6 +48,7 @@ export default function App() {
             <View style={styles.content}>
               {page === "map" && <MapPage />}
               {page === "posts" && <PostsPage />}
+              {page === "createPost" && <CreatePostPage />}
               {page === "profile" && <ProfilePage />}
             </View>
             <Navbar current={page} onChange={setPage} />

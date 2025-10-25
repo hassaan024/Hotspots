@@ -3,13 +3,21 @@ import { postsDb } from "./db_posts";
 import { createPostSchema, updatePostSchema } from "./validators";
 import multer from "multer";
 import path from "node:path";
+import fs from "fs";
+
 
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
-    const posts = await postsDb.posts.findMany({ orderBy: { postid: "desc" } });
+    const { postedby } = req.query as { postedby?: string };
+    const where = postedby ? { postedby } : undefined;
+
+    const posts = await postsDb.posts.findMany({
+      where,
+      orderBy: { postid: "desc" },
+    });
     res.json(posts);
   } catch (e) { next(e); }
 });
@@ -48,13 +56,13 @@ router.get("/:postid(\\d+)", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post("/", async (req, res, next) => {
-  try {
-    const data = createPostSchema.parse(req.body);
-    const created = await postsDb.posts.create({ data });
-    res.status(201).json(created);
-  } catch (e) { next(e); }
-});
+    router.post("/", async (req, res, next) => {
+      try {
+        const data = createPostSchema.parse(req.body);
+        const created = await postsDb.posts.create({ data });
+        res.status(201).json(created);
+      } catch (e) { next(e); }
+    });
 
 router.patch("/:postid", async (req, res, next) => {
   try {
@@ -85,34 +93,24 @@ router.get("/:postid/with-user", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-//this handles uploads to the database
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, path.join(process.cwd(), "uploads")),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      const base = path.basename(file.originalname, ext);
-      cb(null, `${base}_${Date.now()}${ext}`);
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+const UPLOAD_DIR = path.resolve(process.cwd(), "src/uploads"); // NOT src/uploads
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename: (_req, file, cb) =>
+    cb(null, `${crypto.randomUUID()}_${Date.now()}${path.extname(file.originalname || ".jpg")}`)
 });
+const upload = multer({ storage });
 
-//format: file + postedby + posttype)
-router.post("/upload", upload.single("file"), async (req, res, next) => {
-  try {
-    const { postedby, posttype = 0 } = req.body;
-    if (!req.file) return res.status(400).json({ error: "No file" });
+// THIS PATH MUST BE '/upload' because we will mount the router at '/api/posts'
+router.post("/upload", upload.single("file"), (req, res) => {
 
-    const datapath = `uploads/${req.file.filename}`;
-    const created = await postsDb.posts.create({
-      data: { postedby, posttype: Number(posttype), datapath, location: null, visibility: null },
-    });
-    res.status(201).json(created);
-  } catch (e) { next(e); }
+  if (!req.file) return res.status(400).json({ error: "No file" });
+  const location = req.body;
+  res.json({ filename: req.file.filename }); // client expects { filename }
+
 });
-
-
-
 
 export default router;

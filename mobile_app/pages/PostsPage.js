@@ -13,9 +13,6 @@ function toImageUri(datapath) {
   return `${API_BASE}/uploads/${clean}`;
 }
 
-
-
-
 export default function PostsPage() {
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);

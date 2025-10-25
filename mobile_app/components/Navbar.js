@@ -1,13 +1,9 @@
-import React, { useContext } from "react";
+import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // Icon set
 import { styles } from "../styles";
-import { AuthContext } from "../AuthContext";
 
 export default function Navbar({ current, onChange }) {
-  // Uncomment if logout button needs to be used on this page
-  // const { logout } = useContext(AuthContext);
-
   const size = 22;
   const activeColor = "#ffffff";
   const inactiveColor = "#9aa0a6";
@@ -29,7 +25,7 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
-        {/* Posts */}
+        {/* Posts (feed) */}
         <TouchableOpacity
           style={[styles.navBtn, current === "posts" && styles.navBtnActive]}
           onPress={() => onChange("posts")}
@@ -41,6 +37,18 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
+        {/* Create Post */}
+        <TouchableOpacity
+          style={[styles.navBtn, current === "createPost" && styles.navBtnActive]}
+          onPress={() => onChange("createPost")}
+        >
+          <Ionicons
+            name={current === "createPost" ? "create" : "create-outline"}
+            size={size}
+            color={current === "createPost" ? activeColor : inactiveColor}
+          />
+        </TouchableOpacity>
+
         {/* Profile */}
         <TouchableOpacity
           style={[styles.navBtn, current === "profile" && styles.navBtnActive]}
@@ -48,25 +56,12 @@ export default function Navbar({ current, onChange }) {
         >
           <Ionicons
             name={
-              current === "profile"
-                ? "person-circle"
-                : "person-circle-outline"
+              current === "profile" ? "person-circle" : "person-circle-outline"
             }
             size={size + 2}
             color={current === "profile" ? activeColor : inactiveColor}
           />
         </TouchableOpacity>
-
-        {/* Logout removded from here*/}
-        {/* <TouchableOpacity
-          style={[
-            styles.navBtn,
-            { marginLeft: 8, backgroundColor: "#f54254" },
-          ]}
-          onPress={logout}
-        >
-          <Ionicons name="log-out-outline" size={size} color="#fff" />
-        </TouchableOpacity> */}
       </View>
     </View>
   );
