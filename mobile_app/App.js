@@ -15,7 +15,7 @@ import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
 
 export default function App() {
-  const [page, setPage] = React.useState("posts"); // "map" | "posts" | "profile"
+  const [page, setPage] = React.useState("map"); // "map" | "posts" | "profile"
   const [user, setUser] = React.useState(null);
 
   const REQUIRE_LOGIN = Constants.expoConfig?.extra?.REQUIRE_LOGIN ?? true;
