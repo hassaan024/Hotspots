@@ -12,14 +12,14 @@ import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
 import cors from 'cors';
 
-const WEB_ORIGIN = 'http://localhost:8081';
+const WEB_ORIGIN = 'http://localhost:8082';
 const app = express();
 
 app.use(cors({
   origin: WEB_ORIGIN,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
+  credentials: true,
   maxAge: 600,
 }));
 
@@ -50,13 +50,14 @@ app.use("/api", apiLimiter);
 
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 //These expose folders to the API
-app.use('/api/users', usersRouter);
-app.use('/api/posts', postsRouter);
+
 
 const UPLOAD_DIR = path.resolve(srcdir, "uploads");
-console.log(UPLOAD_DIR)
-
 app.use("/uploads",crossOriginResourcePolicy({ policy: "cross-origin" }), express.static(UPLOAD_DIR));
+
+console.log(UPLOAD_DIR)
+app.use('/api/users', usersRouter);
+app.use('/api/posts', postsRouter);
 
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });

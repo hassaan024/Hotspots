@@ -4,15 +4,13 @@ import { styles } from "../stylesProfilePage";
 import { AuthContext } from "../AuthContext";
 
 //API imports
-import { listUserPosts, API_BASE } from "../components/api";
+import { listUserPosts, API_BASE , getFollowCounts } from "../components/api";
 export default function ProfilePage() {
   const { logout, user: authUser } = useContext(AuthContext);
   const user = useMemo(
     () => ({
       username: authUser?.username,
       avatar: authUser?.avatar ?? "https://placehold.co/200x200/png",
-      followers: authUser?.followers ?? 1287,
-      following: authUser?.following ?? 342,
       postsCount: 0,
     }),
     [authUser]
@@ -21,6 +19,8 @@ export default function ProfilePage() {
   const [imgs, setImgs] = useState([]);       // array of image URIs for the grid
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   const toImageUri = (p) => {
     const datapath = p?.datapath || p?.dataPath || p?.path;
@@ -47,15 +47,26 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [user.username]);
+    const fetchFollowCounts = useCallback(async () => {
+      try {
+        const { followers, following } = await getFollowCounts(user.username);
+        setFollowerCount(followers);
+        setFollowingCount(following);
+      } catch (e) {
+        console.error(e);
+        // Silently ignore or show a small toast if you have one
+      }
+    }, [user.username]);
 
   useEffect(() => {
     fetchPosts();
-  }, [fetchPosts]);
+    fetchFollowCounts();
+  }, [fetchPosts, fetchFollowCounts]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchPosts();
+      await Promise.all([fetchPosts(), fetchFollowCounts()]);
     } finally {
       setRefreshing(false);
     }
@@ -73,11 +84,12 @@ export default function ProfilePage() {
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{user.followers}</Text>
+              <Text style={styles.statNumber}>{followerCount}</Text>
               <Text style={styles.statLabel}>Followers</Text>
+
             </View>
             <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{user.following}</Text>
+              <Text style={styles.statNumber}>{followingCount}</Text>
               <Text style={styles.statLabel}>Following</Text>
             </View>
           </View>

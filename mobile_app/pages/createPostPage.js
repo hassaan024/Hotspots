@@ -8,23 +8,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { styles, colors } from "../stylesCreatePostPage";
+import { uploadImage, createPost } from "../components/api";
+import { useContext } from "react";
+import { AuthContext } from "../AuthContext";
 
 export default function CreatePostPage() {
   const [selectedUri, setSelectedUri] = useState(null);
   const [caption, setCaption] = useState("");
   const [postedBanner, setPostedBanner] = useState(false);
-
+    const { user: authUser } = useContext(AuthContext);
   // Location state
   const [locationText, setLocationText] = useState("");
   const [locStatus, setLocStatus] = useState("idle"); // idle | fetching | done | error
   const [locError, setLocError] = useState("");
 
-  const canPost =
-    Boolean(selectedUri) && caption.trim().length > 0 && locStatus === "done" && !!locationText.trim();
+const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.trim();
 
   async function pickImage() {
     // request permission on native (web typically not needed)
@@ -146,21 +149,38 @@ export default function CreatePostPage() {
     setLocError("");
   }
 
-  function onPost() {
-    if (!canPost) return;
-    // simulate success
-    setPostedBanner(true);
+async function onPost() {
+  try {
+    if (!selectedUri) throw new Error("Pick an image first");
 
-    // reset form
-    setSelectedUri(null);
-    setCaption("");
-    setLocationText("");
-    setLocStatus("idle");
-    setLocError("");
+    // 1) upload image -> returns filename like "abc123.jpg"
+    const filename = await uploadImage(selectedUri);
 
-    // auto hide banner
-    setTimeout(() => setPostedBanner(false), 2600);
+    // 2) build payload EXACTLY as server expects
+    const payload = {
+      postedby: authUser?.username ?? "",   // string
+      posttype: 0,                          // number (adjust to your enum)
+      datapath: filename,                   // string (no "/uploads/", just the filename)
+      // If you include location, make sure types match your server schema:
+      // lat: typeof lat === "number" ? lat : undefined,
+      // lng: typeof lng === "number" ? lng : undefined,
+    };
+
+    // guard against undefined required fields
+    if (!payload.postedby) throw new Error("No username in AuthContext");
+    if (typeof payload.posttype !== "number") throw new Error("posttype must be a number");
+    if (!payload.datapath) throw new Error("datapath (filename) missing");
+
+    // 3) create the post
+    await createPost(payload);
+
+    // 4) navigate/clear UI as needed
+    // ...
+  } catch (e) {
+    console.error(e);
+    Alert.alert("Post failed", String(e?.message ?? e));
   }
+}
 
   return (
     <KeyboardAvoidingView
