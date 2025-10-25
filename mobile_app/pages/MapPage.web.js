@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Image as RNImage, ActivityIndicator } from "react-native";
 import { styles } from "../styles";
-import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { listLocations, API_BASE } from "../components/api";
 import { loadGoogleMaps } from "../utils/googleMapsLoader";
 
@@ -44,6 +43,8 @@ const Uluru = { lat: -25.344, lng: 131.031 };
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const heatmapRef = useRef(null);
+  const markersRef = useRef([]);
   const [error, setError] = useState(null);
   const [loadingMaps, setLoadingMaps] = useState(true);
 
@@ -169,11 +170,47 @@ export default function MapPage() {
             },
           ],
         */});
-         
 
         mapInstanceRef.current = map;
+        // Clear any prior markers
+        markersRef.current = [];
+        
+        // make sure the visualization lib is present, with or without importLibrary
+let HeatmapLayer = google.maps.visualization?.HeatmapLayer;
+if (!HeatmapLayer && google.maps.importLibrary) {
+  const viz = await google.maps.importLibrary("visualization");
+  HeatmapLayer = viz.HeatmapLayer;
+}
+if (!HeatmapLayer) throw new Error("Heatmap library not available");
 
-        const infoWindow = new InfoWindow();
+// convert your points into LatLng
+const heatData = points
+  .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+  .map(p => new google.maps.LatLng(p.lat, p.lng));
+
+// custom gradient that reads well on dark maps
+const gradient = [
+  "rgba(0, 0, 0, 0)",
+  "rgba(0, 120, 255, 0.4)",
+  "rgba(0, 180, 255, 0.6)",
+  "rgba(0, 255, 200, 0.7)",
+  "rgba(120, 255, 120, 0.8)",
+  "rgba(255, 230, 0, 0.9)",
+  "rgba(255, 140, 0, 0.95)",
+  "rgba(255, 0, 0, 1.0)"
+];
+
+        // create the heatmap (we will toggle visibility based on viewport density)
+        const heatmap = new HeatmapLayer({
+          data: heatData,
+          map,                 // start visible; updateLayerVisibility will switch as needed
+          dissipating: true,
+          radius: 28,
+          opacity: 0.6,
+          gradient
+        });
+        heatmapRef.current = heatmap;
+        // Try to get and show user's location
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
             pos => {
@@ -204,12 +241,12 @@ export default function MapPage() {
           );
         }
 
-        // Create image-backed markers using AdvancedMarkerElement content, then cluster
+        // Create image-backed markers using AdvancedMarkerElement content
         const placeholder = `data:image/svg+xml;utf8,${encodeURIComponent(
           '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="100%" height="100%" rx="20" ry="20" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
         )}`;
 
-        const markers = points.map((p) => {
+        markersRef.current = points.map((p) => {
           const img = document.createElement("img");
           img.src = toImageUri(p.datapath) || placeholder;
           img.alt = p.postedby ? `@${p.postedby}` : "post";
@@ -227,14 +264,46 @@ export default function MapPage() {
           });
         });
 
-        new MarkerClusterer({ markers, map });
+        // Toggle strategy: if many points are in the viewport, hide all markers and show heatmap; otherwise show markers and hide heatmap.
+        const DENSITY_THRESHOLD = 25; // tweak: when >= this many points fit in current bounds, prefer heatmap
+
+        function updateLayerVisibility() {
+          const b = map.getBounds();
+          if (!b) return;
+          const inView = points.filter(p => b.contains(new google.maps.LatLng(p.lat, p.lng))).length;
+          const crowded = inView >= DENSITY_THRESHOLD;
+
+          // show heatmap when crowded, hide when sparse
+          if (heatmapRef.current) heatmapRef.current.setMap(crowded ? map : null);
+
+          // show or hide markers as a group
+          for (const m of markersRef.current) m.setMap(crowded ? null : map);
+        }
+
+        // initial apply and on viewport changes
+        updateLayerVisibility();
+        const idleListener = map.addListener("idle", updateLayerVisibility);
       } catch (e) {
         console.error(e);
         setError("Failed to load map or locations");
       }
     })();
 
-    return () => { cancelled = true; mapInstanceRef.current = null; };
+    return () => {
+      cancelled = true;
+      if (heatmapRef.current) {
+        heatmapRef.current.setMap(null);
+        heatmapRef.current = null;
+      }
+      if (markersRef.current && markersRef.current.length) {
+        for (const m of markersRef.current) m.setMap(null);
+        markersRef.current = [];
+      }
+      if (mapInstanceRef.current) {
+        try { google.maps.event.clearInstanceListeners(mapInstanceRef.current); } catch {}
+        mapInstanceRef.current = null;
+      }
+    };
   }, []);
 
   return (
@@ -243,30 +312,12 @@ export default function MapPage() {
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
       ) : (
-        <View style={{ position: "relative" }}>
-          <View
-            ref={mapRef}
-            style={[
-              styles.mapContainer || { flex: 1 },
-              { minHeight: 500, borderRadius: 0, overflow: "hidden", borderWidth: 1, borderColor: "#ddd" }
-            ]}
-          />
+        <View style={styles.mapWrapper}>
+          <View ref={mapRef} style={styles.mapContainer} />
           {loadingMaps && (
-            <View
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.35)",
-                borderRadius: 12
-              }}
-            >
+            <View style={styles.mapLoadingOverlay}>
               <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={{ color: "#fff", marginTop: 12 }}>Loading map…</Text>
+              <Text style={styles.mapLoadingText}>Loading map…</Text>
             </View>
           )}
         </View>
