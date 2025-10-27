@@ -192,14 +192,14 @@ async function onPost() {
           if (!blob) throw new Error("Could not create video thumbnail");
           const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: "image/jpeg" });
           const objUrl = URL.createObjectURL(file);
-          const t = await uploadMedia(objUrl, { fileName: file.name, mimeType: file.type });
+          const t = await uploadImage(objUrl, { fileName: file.name, mimeType: file.type });
           URL.revokeObjectURL(objUrl);
           thumbname = t.filename;
         } else {
           // NATIVE: use expo-video-thumbnails (lazy require to avoid web bundling)
           const VideoThumbnails = require("expo-video-thumbnails");
           const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(selectedUri, { time: 1000 });
-          const t = await uploadMedia(thumbUri, { fileName: `thumb-${Date.now()}.jpg`, mimeType: "image/jpeg" });
+          const t = await uploadImage(thumbUri, { fileName: `thumb-${Date.now()}.jpg`, mimeType: "image/jpeg" });
           thumbname = t.filename;
         }
       }
@@ -208,7 +208,6 @@ async function onPost() {
       posttype: isVideo ? 1 : 0,            // 0=image, 1=video
       datapath: filename,                   // plain filename from server
       location: (locationText || "").replace(/\s   /g, ""), // "lat,lng" no spaces
-      caption: caption ?? "",
       thumbpath: thumbname,
     };
 

@@ -7,12 +7,7 @@ import { listLocations } from "../components/api";
 
 export default function MapPage() {
   const [points, setPoints] = useState([]);
-  const [region, setRegion] = useState({
-    latitude: 37.7749,
-    longitude: -122.4194,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
+  const [region, setRegion] = useState([]);
 
   useEffect(() => {
     (async () => {
