@@ -22,14 +22,14 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
 
-    const toImageUri = (p) => {
-      const path = (Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath) || p?.dataPath || p?.path;
-      if (!path) return null;
-    const base = (API_BASE || "").replace(/\/$/, "");
-
-    const rel = String(path).replace(/^\//, "");    //console.log(`${base}/uploads/${rel}`);
-    return `${base}/uploads/${rel}`;
-  };
+const toImageUri = (p) => {
+  const path =
+    Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath;
+  if (!path) return null;
+  const base = (API_BASE || "").replace(/\/$/, "");
+  const rel = String(path).replace(/^\//, "");
+  return `${base}/uploads/${rel}`;
+};
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,7 +75,7 @@ export default function ProfilePage() {
           <Image source={{ uri: user.avatar }} style={styles.avatar} />
           <View style={styles.headerStats}>
             <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{imgs.length}</Text>
+              <Text style={styles.statNumber}>{posts.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.statBlock}>
