@@ -87,7 +87,7 @@ if (!isVideo) {
   return (
     <Image
       source={{ uri }}
-      style={{ width: size, aspectRatio: ar, resizeMode: "cover" }} // ⬅️ no fixed height
+      style={{ width: size, aspectRatio: ar, resizeMode: "contain" }} // ⬅️ no fixed height
     />
   );
 }
@@ -99,7 +99,7 @@ if (isWeb) {
       src={uri}
       controls
       poster={poster || undefined}
-      style={{ width: size, height: "auto", display: "block", objectFit: "cover" }} // ⬅️ no fixed height
+      style={{ width: size, height: "auto", maxHeight: "80vh", display: "block", objectFit: "contain" }}
     />
   );
 }
@@ -110,7 +110,7 @@ return VideoComp ? (
     source={{ uri }}
     style={{ width: size, height: size / ar }}             // ⬅️ derived height
     useNativeControls
-    resizeMode="cover"
+    resizeMode="contain"
     posterSource={poster ? { uri: poster } : undefined}
     onLoad={({ naturalSize }) => {
       const w = naturalSize?.width, h = naturalSize?.height;
