@@ -96,6 +96,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.panelBorder,
   },
+  screenMap: {
+    flex: 1,
+    backgroundColor: colors.panel,
+    borderRadius: 14,
+    paddingLeft: 5,
+    paddingRight: 5,
+    paddingTop: 32,
+    paddingBottom: 32,
+    borderWidth: 1,
+    borderColor: colors.panelBorder,
+  },
   screenTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -108,6 +119,8 @@ export const styles = StyleSheet.create({
   /* Map */
   mapWrapper: {
     position: "relative",
+    height: "100%",
+    width: "100%",
   },
   mapContainer: {
     flex: 1,
@@ -116,6 +129,8 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#ddd",
+    height: "95%",
+    width: "100%",
   },
   mapLoadingOverlay: {
     position: "absolute",

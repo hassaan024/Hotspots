@@ -336,7 +336,7 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
   }, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screenMap}>
       <Text style={styles.screenTitle}>Map</Text>
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
