@@ -99,7 +99,7 @@ if (!isVideo) {
   return (
     <Image
       source={{ uri }}
-      style={{ width: size, aspectRatio: ar, resizeMode: "cover" }} // ⬅️ no fixed height
+      style={{ width: size, aspectRatio: ar, resizeMode: "contain" }} // ⬅️ no fixed height
     />
   );
 }
