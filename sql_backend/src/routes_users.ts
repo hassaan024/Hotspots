@@ -88,6 +88,8 @@ router.post("/login", async (req, res, next) => {
       where: { username },
       select: { username: true, email: true, passwordHash: true },
     });
+    if(user == null){
+        return res.status(400).json({error: "not a registerd user"});}
 
     if (!user?.passwordHash) {
       return res.status(401).json({ error: "Invalid username or password" });

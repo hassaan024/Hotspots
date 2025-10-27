@@ -28,25 +28,46 @@ router.get("/", async (req, res, next) => {
 });
 
 
-router.get("/locations", async (_req, res, next) => {
+router.get("/locations", async (req, res) => {
   try {
+    // 1) SELECT all needed fields
     const rows = await postsDb.posts.findMany({
-      where: { location: { not: null } },
-      select: { postid: true, postedby: true, location: true, datapath: true },
+      select: {
+        postid: true,
+        postedby: true,
+        location: true,   // "lat,lng" string
+        datapath: true,
+        thumbpath: true,  // <-- must exist in your model
+        posttype: true,   // <-- must exist in your model
+      },
     });
 
-    const points = rows.map(r => {
-      const [a, b] = String(r.location ?? "").split(",").map(s => s.trim());
-      const lat = Number(a), lng = Number(b);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-      return { id: r.postid, postedby: r.postedby, lat, lng, datapath: r.datapath ?? null };
-    }).filter(Boolean);
+    // 2) Map to points; validate coords
+    const points = rows
+      .map((r) => {
+        const [a, b] = String(r.location ?? "").split(",").map((s) => s.trim());
+        const lat = Number(a), lng = Number(b);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+        return {
+          id: r.postid,
+          postedby: r.postedby,
+          lat,
+          lng,
+          datapath: r.datapath ?? null,
+          thumbpath: r.thumbpath ?? null,
+          posttype: typeof r.posttype === "number" ? r.posttype : Number(r.posttype ?? 0),
+        };
+      })
+      .filter(Boolean);
 
     res.json(points);
-  } catch (e) { next(e); }
+  } catch (e: any) {
+    console.error("GET /api/posts/locations error:", e);
+    res.status(500).json({ error: String(e?.message || e) });
+  }
 });
-
 
 router.get("/:postid(\\d+)", async (req, res, next) => {
   try {
@@ -61,13 +82,26 @@ router.get("/:postid(\\d+)", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-    router.post("/", async (req, res, next) => {
-      try {
-        const data = createPostSchema.parse(req.body);
-        const created = await postsDb.posts.create({ data });
-        res.status(201).json(created);
-      } catch (e) { next(e); }
-    });
+router.post("/", async (req, res, next) => {
+  try {
+    const data = createPostSchema.parse(req.body);
+
+    const insert: any = {
+      postedby: data.postedby,
+      posttype: data.posttype,   // 0 or 1
+      datapath: data.datapath,
+      location: data.location,
+    };
+    if (data.thumbpath) insert.thumbpath = data.thumbpath;
+
+    const post = await postsDb.posts.create({ data: insert });
+    res.status(201).json(post);
+  } catch (e) {
+    console.error("Create post error:", e);
+    // surface message so you can see the real reason in the client
+    res.status(400).json({ error: String(e?.message || e) });
+  }
+});
 
 router.patch("/:postid", async (req, res, next) => {
   try {
@@ -121,4 +155,4 @@ router.post("/upload", upload.single("file"), (req, res) => {
   res.json({ filename: req.file.filename }); // same shape as images
 });
 
-export router;
+export default router;
