@@ -1,44 +1,27 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, Image, Dimensions, FlatList, RefreshControl, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+} from "react-native";
 import { styles } from "../styles";
-import { listPosts, API_BASE } from "../components/api";
-import { Platform } from "react-native";
+import {
+  listPosts,
+  API_BASE,
+  getPostWithComments,
+  updateLikeStatus,
+} from "../components/api";
+import { Ionicons, Feather } from "@expo/vector-icons";
 
-import { Video } from "expo-av";
-const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
-
-// optional: lazy import Video for native
-let VideoComp = null;
-try { VideoComp = require("expo-av").Video; } catch {}
-
-const Media = ({ uri, isVideo, height }) => {
-  if (!isVideo) {
-    return (
-      <Image
-        source={{ uri }}
-        style={{ width: "100%", height, resizeMode: "contain" }}
-      />
-    );
-  }
-  // video path
-  return isWeb ? (
-    <video
-      src={uri}
-      controls
-      // display:block avoids inline-video layout gaps inside bordered containers
-      style={{ width: "100%", height, display: "block", objectFit: "contain" }}
-    />
-  ) : (
-    VideoComp ? (
-      <VideoComp
-        source={{ uri }}
-        style={{ width: "100%", height }}
-        useNativeControls
-        resizeMode="contain"
-      />
-    ) : null
-  );
-};
+const { width } = Dimensions.get("window");
+const imageSize = width;
 
 function toImageUri(datapath) {
   if (!datapath) return null;
@@ -52,79 +35,413 @@ export default function PostsPage() {
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
-  //TODO make scalable with window/device resolution
-   const width = 768;
-   const height = 1024;
+  const [likedPosts, setLikedPosts] = useState({});
+  const [likeCounts, setLikeCounts] = useState({});
+  const [followStatus, setFollowStatus] = useState({});
+  const [viewingPost, setViewingPost] = useState(null); // shows comment view
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareTargetPost, setShareTargetPost] = useState(null);
 
+  // Load posts
   const load = useCallback(async () => {
-    setErr(null);
     try {
-      const data = await listPosts();//expects [postedby, posttype, datapath }]
+      const data = await listPosts();
       setPosts(data);
+
+      // initialize like counts if backend provides them
+      const counts = {};
+      data.forEach((p) => {
+        counts[p.postid] = p.likeCount || 0;
+      });
+      setLikeCounts(counts);
     } catch (e) {
-      setErr(String(e.message ?? e));
+      console.error(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-    useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-const renderItem = ({ item }) => {
-  const uri = toImageUri(item.datapath);
-  const isVideo = Number(item.posttype) === 1;
-
-  return (
-    <View style={[styles.postWrapper, { height }]}>
-      <Text style={styles.username}>@{item.postedby}</Text>
-
-      {/* This container holds the border for BOTH media types */}
-      <View style={styles.postBox}>
-        <Media uri={uri} isVideo={isVideo} height={height} />
-      </View>
-    </View>
-  );
-};
-
-    const getItemLayout = (_data, index) => ({
-      length: height,
-      offset: height * index,
-      index,
+  // Toggle like and count (and save to backend)
+  const toggleLike = async (postid) => {
+    setLikedPosts((prev) => {
+      const alreadyLiked = prev[postid];
+      setLikeCounts((counts) => ({
+        ...counts,
+        [postid]: Math.max(0, (counts[postid] || 0) + (alreadyLiked ? -1 : 1)),
+      }));
+      return {
+        ...prev,
+        [postid]: !alreadyLiked,
+      };
     });
 
+    const likedNow = !likedPosts[postid];
+    await updateLikeStatus(postid, likedNow); // backend sync
+  };
 
-  return (
-    <FlatList
-      data={posts}
-      renderItem={renderItem}
-      keyExtractor={(item) => String(item.postid)}
-      showsVerticalScrollIndicator={false}
-      pagingEnabled={false}
-      snapToAlignment={undefined}
-      decelerationRate="normal"
-      getItemLayout={undefined}
-      removeClippedSubviews
-      initialNumToRender={6}
-      windowSize={7}
-      //contentContainerStyle={{ paddingTop: HEADER_HEIGHT, paddingBottom: NAVBAR_HEIGHT + 12 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); load(); }}
-          tintColor="#fff"
+  const handleFollowToggle = (username) => {
+    setFollowStatus((prev) => ({
+      ...prev,
+      [username]: !prev[username],
+    }));
+  };
+
+  // Open comment view
+  const handleComment = async (postid) => {
+    try {
+      setLoading(true);
+      const data = await getPostWithComments(postid);
+      setViewingPost(data);
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goBackToFeed = () => setViewingPost(null);
+
+  // Comment View (when a post is opened)
+  if (viewingPost) {
+    const imgUri = toImageUri(viewingPost.datapath);
+    const profilePic =
+      viewingPost.profilepic && viewingPost.profilepic !== ""
+        ? toImageUri(viewingPost.profilepic)
+        : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+
+    return (
+      <ScrollView style={[styles.app, { paddingTop: 10 }]}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+          }}
+        >
+          <TouchableOpacity onPress={goBackToFeed}>
+            <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: profilePic }}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              marginHorizontal: 10,
+              borderWidth: 1.5,
+              borderColor: "#9CA3AF",
+            }}
+          />
+          <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+            @{viewingPost.postedby}
+          </Text>
+        </View>
+
+        {/* Post image */}
+        <Image
+          source={{ uri: imgUri }}
+          style={{
+            width: width,
+            height: width,
+            resizeMode: "cover",
+          }}
         />
-      }
-      ListEmptyComponent={
-        <Text style={{ color: "#fff", textAlign: "center", marginTop: 24 }}>
-          No posts yet.
-        </Text>
-      }
-    />
-  );
+
+        {/* Caption */}
+        <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
+          <Text style={{ color: "#E5E7EB" }}>
+            <Text style={{ fontWeight: "bold" }}>
+              @{viewingPost.postedby}{" "}
+            </Text>
+            {viewingPost.description}
+          </Text>
+        </View>
+
+        {/* Comments */}
+        <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
+          <Text
+            style={{
+              color: "#9CA3AF",
+              fontWeight: "bold",
+              marginBottom: 8,
+            }}
+          >
+            Comments
+          </Text>
+          {viewingPost.comments && viewingPost.comments.length > 0 ? (
+            viewingPost.comments.map((c) => (
+              <Text
+                key={c.commentid}
+                style={{ color: "#E5E7EB", marginBottom: 6 }}
+              >
+                <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
+                {c.text}
+              </Text>
+            ))
+          ) : (
+            <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
+          )}
+        </View>
+      </ScrollView>
+    );
   }
 
+  // Main Feed View
+  return (
+    <View style={[styles.app, { paddingTop: 10 }]}>
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#60A5FA"
+          style={{ marginTop: 40 }}
+        />
+      ) : (
+        <FlatList
+          data={posts}
+          renderItem={({ item }) => {
+            const imgUri = toImageUri(item.datapath);
+            const profilePic =
+              item.profilepic && item.profilepic !== ""
+                ? toImageUri(item.profilepic)
+                : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+            const isLiked = likedPosts[item.postid];
+            const isFollowing = followStatus[item.postedby];
 
+            return (
+              <View
+                style={{
+                  backgroundColor: "#121821",
+                  marginBottom: 20,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: "#1F2937",
+                }}
+              >
+                {/* Header */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Image
+                      source={{ uri: profilePic }}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        marginRight: 10,
+                        borderWidth: 1.5,
+                        borderColor: "#9CA3AF",
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => console.log(`Clicked on @${item.postedby}`)} // makes the username clickable
+                    >
+                      <Text style={styles.username}>@{item.postedby}</Text>
+                    </TouchableOpacity>
 
+                  </View>
 
+                  <TouchableOpacity
+                    onPress={() => handleFollowToggle(item.postedby)}
+                    style={{
+                      backgroundColor: "#1F2937",
+                      paddingVertical: 5,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                      {isFollowing ? "Unfollow" : "Follow"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Post image */}
+                <Image
+                  source={{ uri: imgUri }}
+                  style={{
+                    width: imageSize,
+                    height: imageSize,
+                    resizeMode: "cover",
+                  }}
+                />
+
+                {/* Icons */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <TouchableOpacity onPress={() => toggleLike(item.postid)}>
+                    <Ionicons
+                      name={isLiked ? "heart" : "heart-outline"}
+                      size={26}
+                      color={isLiked ? "#F87171" : "#E5E7EB"}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => handleComment(item.postid)}>
+                    <Feather name="message-circle" size={24} color="#E5E7EB" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShareTargetPost(item);
+                      setShareModalVisible(true);
+                    }}
+                  >
+                    <Feather name="send" size={22} color="#E5E7EB" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Likes + Caption */}
+                <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+                  <Text
+                    style={{
+                      color: "#E5E7EB",
+                      marginBottom: 3,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {likeCounts[item.postid] || 0} likes
+                  </Text>
+
+                  {item.description ? (
+                    <Text style={{ color: "#E5E7EB", marginTop: 4 }}>
+                      <Text style={{ fontWeight: "bold" }}>
+                        @{item.postedby}{" "}
+                      </Text>
+                      {item.description}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            );
+          }}
+          keyExtractor={(item) => String(item.postid)}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              tintColor="#fff"
+            />
+          }
+          ListEmptyComponent={
+            <Text
+              style={{
+                color: "#9CA3AF",
+                textAlign: "center",
+                marginTop: 24,
+              }}
+            >
+              No posts yet.
+            </Text>
+          }
+        />
+      )}
+
+      {/* Share feature */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={shareModalVisible}
+        onRequestClose={() => setShareModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#1F2937",
+              borderRadius: 12,
+              padding: 20,
+              width: "80%",
+              maxHeight: "60%",
+            }}
+          >
+            <Text
+              style={{
+                color: "#E5E7EB",
+                fontSize: 18,
+                fontWeight: "bold",
+                marginBottom: 12,
+                textAlign: "center",
+              }}
+            >
+              Share Post
+            </Text>
+
+            <Text
+              style={{
+                color: "#9CA3AF",
+                marginBottom: 12,
+                textAlign: "center",
+              }}
+            >
+              Select someone to share with:
+            </Text>
+
+            {/* Example static list (replace with backend data later) */}
+            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+              <TouchableOpacity
+                key={user}
+                style={{
+                  paddingVertical: 10,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: "#374151",
+                }}
+                onPress={() => {
+                  console.log(
+                    `Shared post ${shareTargetPost?.postid} with ${user}`
+                  );
+                  setShareModalVisible(false);
+                }}
+              >
+                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => setShareModalVisible(false)}
+              style={{
+                marginTop: 20,
+                alignSelf: "center",
+                backgroundColor: "#374151",
+                paddingHorizontal: 24,
+                paddingVertical: 10,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
