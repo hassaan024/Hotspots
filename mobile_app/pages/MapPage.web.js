@@ -8,10 +8,11 @@ import { loadGoogleMaps } from "../utils/googleMapsLoader";
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 const DENSITY_THRESHOLD = 3;
-const CLUSTER_RADIUS_M = 150; // show heatmap when >= this many posts are visible
-const ZOOM_THRESHOLD = 14;
+const CLUSTER_RADIUS_M = 100; // show heatmap when >= this many posts are visible
+const ZOOM_THRESHOLD = 1;
 
-// Build a usable image URL from a post's datapath (mirrors PostsPage logic)
+const CROWD_HIDE_MAX_ZOOM = 10;
+
 
 const Uluru = { lat: -25.344, lng: 131.031 };
 const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
@@ -19,7 +20,7 @@ const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 const isImagePath = (s = "") => /\.(jpe?g|png|webp|gif)$/i.test(s);
 const isVideoPath = (s = "") => /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(s);
 
-// same URL builder 
+// Build a usable image URL from a post's datapath (mirrors PostsPage logic)
 function toImageUri(datapath) {
   if (!datapath) return null;
   if (/^https?:\/\//i.test(datapath)) return datapath;
@@ -28,7 +29,7 @@ function toImageUri(datapath) {
   return `${API_BASE}/uploads/${clean}`;
 }
 
-// pick the preview asset like PostsPage logic:
+// pick the preview asset
 // - if it's a video => use thumbpath (fallback to null so we don't try to <img> a .mp4)
 // - if it's an image => use datapath
 function pickPreviewAsset(p) {
@@ -278,7 +279,7 @@ function updateLayerVisibility() {
   }
 
   const zoomLevel = DLV_MAP.getZoom() || 0;
-  const hideMarkers = crowded || zoomLevel < ZOOM_THRESHOLD;
+  const hideMarkers = (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM) || zoomLevel < ZOOM_THRESHOLD;
 
   if (heatmapRef.current) heatmapRef.current.setMap(hideMarkers ? DLV_MAP : null);
 
@@ -407,11 +408,8 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
                   Posted by: {selectedPost.postedby || "Unknown"}
                 </Text>
-                <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>
-                  Latitude: {selectedPost.lat}
-                </Text>
-                <Text style={{ color: "#fff", fontSize: 16 }}>
-                  Longitude: {selectedPost.lng}
+                <Text style={[styles.text, { marginBottom: 8 }]}>
+                  {String(selectedPost?.caption || "").trim() || "(no caption)"}
                 </Text>
               </View>
             </TouchableOpacity>
