@@ -184,8 +184,9 @@ export const styles = StyleSheet.create({
   // Image card ABOVE blur (zIndex 1)
   viewerCard: {
     zIndex: 1,
-    maxWidth: "96%",
+    maxWidth: "80%",
     maxHeight: "80%",
+    margin: "auto 0",
     backgroundColor: colors.panel,
     borderColor: colors.panelBorder,
     borderWidth: 1,
