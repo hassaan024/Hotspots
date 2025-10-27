@@ -211,7 +211,7 @@ export default function MapPage() {
 
         const markers = points.map((p) => {
           const img = document.createElement("img");
-          img.src = toImageUri(p.datapath) || placeholder;
+          img.src = toImageUri(p.thumbpath || p.datapath) || placeholder;
           img.alt = p.postedby ? `@${p.postedby}` : "post";
           img.style.width = "40px";
           img.style.height = "40px";

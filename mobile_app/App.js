@@ -13,7 +13,7 @@ import CreatePostPage from "./pages/createPostPage";
 
 import { styles } from "./styles";
 import { AuthContext } from "./AuthContext";
-
+import MobileScaler from "./MobileScaler";
 export default function App() {
   const [page, setPage] = React.useState("posts"); // "map" | "posts" | "profile"
   const [user, setUser] = React.useState(null);

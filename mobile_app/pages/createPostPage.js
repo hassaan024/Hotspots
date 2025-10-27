@@ -17,6 +17,24 @@ import { uploadImage, createPost } from "../components/api";
 import { useContext } from "react";
 import { AuthContext } from "../AuthContext";
 
+const makeWebVideoThumb = async (videoUri, timeMs = 1000) => {
+  const video = document.createElement("video");
+  video.src = videoUri;
+  video.crossOrigin = "anonymous";
+  await new Promise((res, rej) => {
+    video.onloadeddata = res;
+    video.onerror = () => rej(new Error("Video load error"));
+  });
+  video.currentTime = Math.min(timeMs / 1000, Math.max((video.duration || 2) - 0.1, 0.1));
+  await new Promise((res) => { video.onseeked = res; });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth || 512;
+  canvas.height = video.videoHeight || 512;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", 0.85));
+};
 export default function CreatePostPage() {
     const [selectedMeta, setSelectedMeta] = useState({ fileName: null, mimeType: null });
 
@@ -72,6 +90,7 @@ const result = await ImagePicker.launchImageLibraryAsync({
 
     try {
       if (Platform.OS === "web" && navigator?.geolocation) {
+
         await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
@@ -164,13 +183,33 @@ async function onPost() {
     const { filename, mimetype } = await  uploadImage(selectedUri, selectedMeta);
     const isVideo = (mimetype || "").startsWith("video/") ||
                     /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(filename);
-
+      // If video: generate & upload a JPG thumbnail
+      let thumbname;
+      if (isVideo) {
+        if (typeof window !== "undefined") {
+          // WEB: make a blob thumbnail and upload
+          const blob = await makeWebVideoThumb(selectedUri, 1000);
+          if (!blob) throw new Error("Could not create video thumbnail");
+          const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: "image/jpeg" });
+          const objUrl = URL.createObjectURL(file);
+          const t = await uploadMedia(objUrl, { fileName: file.name, mimeType: file.type });
+          URL.revokeObjectURL(objUrl);
+          thumbname = t.filename;
+        } else {
+          // NATIVE: use expo-video-thumbnails (lazy require to avoid web bundling)
+          const VideoThumbnails = require("expo-video-thumbnails");
+          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(selectedUri, { time: 1000 });
+          const t = await uploadMedia(thumbUri, { fileName: `thumb-${Date.now()}.jpg`, mimeType: "image/jpeg" });
+          thumbname = t.filename;
+        }
+      }
     const payload = {
       postedby: authUser?.username ?? "",
       posttype: isVideo ? 1 : 0,            // 0=image, 1=video
       datapath: filename,                   // plain filename from server
-      location: (locationText || "").replace(/\s+/g, ""), // "lat,lng" no spaces
-      caption: caption ?? "",               // if your API allows it
+      location: (locationText || "").replace(/\s   /g, ""), // "lat,lng" no spaces
+      caption: caption ?? "",
+      thumbpath: thumbname,
     };
 
     // sanity guards
