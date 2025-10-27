@@ -23,6 +23,104 @@ import { AuthContext } from "../AuthContext";
 
 // API imports
 import { listUserPosts, API_BASE, getFollowCounts } from "../components/api";
+import { Dimensions, Platform } from "react-native";
+const { width } = Dimensions.get("window");
+
+const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
+let VideoComp = null;            // lazy for native
+try { VideoComp = require("expo-av").Video; } catch {}
+
+/** absolute-URI builder that mirrors your /uploads layout */
+/** Normalize any path/URL to an absolute URI without double-prefixing */
+function toAbsUri(path) {
+  if (!path) return null;
+  const s = String(path);
+  if (/^https?:\/\//i.test(s)) return s;             // already absolute
+  const base = (API_BASE || "").replace(/\/$/, "");
+  if (s.startsWith("/")) return `${base}${s}`;        // server-style absolute
+  // default: treat as relative under /uploads
+  return `${base}/uploads/${s.replace(/^\.?\//, "")}`;
+}
+
+/** Is this post a video? (posttype or extension) */
+function isVideoPost(p) {
+  if (p?.posttype !== undefined && Number(p.posttype) === 1) return true;
+  const name = String(p?.datapath || "").toLowerCase();
+  return /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/.test(name);
+}
+
+/** Get the best thumbnail field, handling name variants from the API */
+function getThumbPath(p) {
+  // check common keys in priority order
+  const k = p?.thumbpath ?? p?.thumbPath ?? p?.thumbnail ?? p?.poster;
+  return k ? String(k) : null;
+}
+
+
+/** poster to use in grid & viewer */
+function getPoster(p) {
+  if (p?.thumbpath) return toAbsUri(p.thumbpath);
+  if (!isVideoPost(p)) return toAbsUri(p?.datapath); // image post: use itself
+  return null; // video with no thumb available
+}
+
+/** unified media renderer */
+const Media = ({ uri, isVideo, poster, size }) => {
+const [ar, setAr] = React.useState(1); // aspect ratio = width/height
+
+// when it's an IMAGE, measure it once and set ar
+React.useEffect(() => {
+  if (!isVideo && uri) {
+    Image.getSize(uri, (w, h) => { if (w && h) setAr(w / h); }, () => {});
+  }
+}, [uri, isVideo]);
+
+// when it's a VIDEO (native), grab natural size from onLoad
+const onVideoLoad = (status) => {
+  const ns = status?.naturalSize;
+  const w = ns?.width, h = ns?.height;
+  if (w && h) setAr(w / h);
+};
+
+// IMAGE render (width fixed, height derived by aspectRatio)
+if (!isVideo) {
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: size, aspectRatio: ar, resizeMode: "cover" }} // ⬅️ no fixed height
+    />
+  );
+}
+
+// WEB VIDEO (let the browser compute height)
+if (isWeb) {
+  return (
+    <video
+      src={uri}
+      controls
+      poster={poster || undefined}
+      style={{ width: size, height: "auto", display: "block", objectFit: "cover" }} // ⬅️ no fixed height
+    />
+  );
+}
+
+// NATIVE VIDEO (expo-av) – compute height from ar after onLoad
+return VideoComp ? (
+  <VideoComp
+    source={{ uri }}
+    style={{ width: size, height: size / ar }}             // ⬅️ derived height
+    useNativeControls
+    resizeMode="cover"
+    posterSource={poster ? { uri: poster } : undefined}
+    onLoad={({ naturalSize }) => {
+      const w = naturalSize?.width, h = naturalSize?.height;
+      if (w && h) setAr(w / h);
+    }}
+  />
+) : null;
+};
+
+
 
 export default function ProfilePage() {
   const { logout, user: authUser } = useContext(AuthContext);
@@ -43,19 +141,21 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState(0);
 
   // Viewer state (stores direct URI instead of full post)
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerUri, setViewerUri] = useState(null);
-  const [viewerLoading, setViewerLoading] = useState(true);
+const [viewerOpen, setViewerOpen] = useState(false);
+const [viewerUri, setViewerUri] = useState(null);
+const [viewerPoster,  setViewerPoster]  = useState(null);
+const [viewerIsVideo, setViewerIsVideo] = useState(false);
+const [viewerLoading, setViewerLoading] = useState(true);
+
 
   // Build the image URL exactly like the grid uses
-  const toImageUri = (p) => {
-    const path =
-      Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath;
-    if (!path) return null;
-    const base = (API_BASE || "").replace(/\/$/, "");
-    const rel = String(path).replace(/^\//, "");
-    return `${base}/uploads/${rel}`;
-  };
+// Build the media URL from post object (image or video)
+const postToUri = (p) => {
+  const path = Number(p?.posttype) === 1 ? (p?.datapath) : p?.datapath;
+  return toAbsUri(path);
+};
+
+
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -96,16 +196,20 @@ export default function ProfilePage() {
   }, [fetchPosts, fetchFollowCounts]);
 
   // Viewer
-  const openViewer = (post) => {
-    const uri = toImageUri(post);
-    if (!uri) {
-      console.warn("No image URI for post:", post);
-      return;
-    }
-    setViewerUri(uri);
-    setViewerLoading(true);
-    setViewerOpen(true);
-  };
+
+const openViewer = (post) => {
+  const isVid = isVideoPost(post);
+  const mediaUri = toAbsUri(post?.datapath);          // play the real media
+  if (!mediaUri) return;
+
+  const posterPath = getThumbPath(post);
+  setViewerUri(mediaUri);
+  setViewerIsVideo(isVid);
+  setViewerPoster(posterPath ? toAbsUri(posterPath) : null);
+  setViewerLoading(true);
+  setViewerOpen(true);
+};
+
 
   const closeViewer = () => {
     setViewerOpen(false);
@@ -155,15 +259,22 @@ export default function ProfilePage() {
             keyExtractor={(p, idx) => String(p.postid ?? idx)}
             numColumns={3}
             contentContainerStyle={styles.gridContainer}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.gridItem}
-                activeOpacity={0.9}
-                onPress={() => openViewer(item)}
-              >
-                <Image source={{ uri: toImageUri(item) }} style={styles.gridImage} />
-              </TouchableOpacity>
-            )}
+renderItem={({ item }) => {
+  const isVideo = isVideoPost(item);
+  const thumb = getThumbPath(item);
+  const gridUri = isVideo
+    ? (thumb ? toAbsUri(thumb) : toAbsUri(item.datapath)) // prefer thumb for video
+    : toAbsUri(item.datapath);                            // images use their own path
+  return (
+    <TouchableOpacity
+      style={styles.gridItem}
+      activeOpacity={0.9}
+      onPress={() => openViewer(item)}
+    >
+      <Image source={{ uri: gridUri }} style={styles.gridImage} />
+    </TouchableOpacity>
+  );
+}}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -195,26 +306,13 @@ export default function ProfilePage() {
 
           {/* Add image functionality here  */}
           {/* Image container */}
-        <View style={styles.viewerCard}>
-            {viewerUri ? (
-              <>
-                <Image
-                  source={{ uri: viewerUri }}
-                  style={styles.viewerImage}
-                  onLoadEnd={() => setViewerLoading(false)}
-                />
-                {viewerLoading && (
-                  <View style={styles.viewerLoading}>
-                    <ActivityIndicator color={colors.accent} />
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text style={{ color: colors.textDim, padding: 12 }}>
-                No image  
-              </Text>
-            )}
-          </View>
+<View style={styles.viewerCard}>
+  {viewerUri ? (
+    <Media uri={viewerUri} isVideo={viewerIsVideo} poster={viewerPoster} size={Dimensions.get("window").width} />
+  ) : (
+    <Text style={{ color: colors.textDim, padding: 12 }}>No media</Text>
+  )}
+</View>
 
           {/* Actions row (Like / Comment / Share) */}
           <View style={styles.viewerActions}>

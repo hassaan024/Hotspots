@@ -1,3 +1,4 @@
+// Fixed PostsPage: Better UI + Correct Upload Handling (images & videos)
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -23,6 +24,15 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 const imageSize = width;
 
+const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
+
+// lazy require for native video to avoid bundling issues on web
+let VideoComp = null;
+try {
+  VideoComp = require("expo-av").Video;
+} catch {}
+
+/** Normalize server paths to absolute URIs */
 function toImageUri(datapath) {
   if (!datapath) return null;
   if (/^https?:\/\//i.test(datapath)) return datapath;
@@ -31,6 +41,46 @@ function toImageUri(datapath) {
   return `${API_BASE}/uploads/${clean}`;
 }
 
+/** Infer video either by posttype === 1 or common video extensions */
+function inferIsVideo(item) {
+  if (item?.posttype !== undefined && Number(item.posttype) === 1) return true;
+  const p = String(item?.datapath || "").toLowerCase();
+  return /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/.test(p);
+}
+
+/** Unified media renderer */
+const Media = ({ uri, poster, isVideo, size }) => {
+  if (!isVideo) {
+    return (
+      <Image
+        source={{ uri }}
+        style={{ width: size, height: size, resizeMode: "cover" }}
+      />
+    );
+  }
+
+  if (isWeb) {
+    return (
+      <video
+        src={uri}
+        controls
+        poster={poster || undefined}
+        style={{ width: size, height: size, display: "block", objectFit: "contain" }}
+      />
+    );
+  }
+
+  return VideoComp ? (
+    <VideoComp
+      source={{ uri }}
+      style={{ width: size, height: size }}
+      useNativeControls
+      resizeMode="contain"
+      posterSource={poster ? { uri: poster } : undefined}
+    />
+  ) : null;
+};
+
 export default function PostsPage() {
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,21 +88,17 @@ export default function PostsPage() {
   const [likedPosts, setLikedPosts] = useState({});
   const [likeCounts, setLikeCounts] = useState({});
   const [followStatus, setFollowStatus] = useState({});
-  const [viewingPost, setViewingPost] = useState(null); // shows comment view
+  const [viewingPost, setViewingPost] = useState(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [shareTargetPost, setShareTargetPost] = useState(null);
 
-  // Load posts
   const load = useCallback(async () => {
     try {
       const data = await listPosts();
       setPosts(data);
 
-      // initialize like counts if backend provides them
       const counts = {};
-      data.forEach((p) => {
-        counts[p.postid] = p.likeCount || 0;
-      });
+      data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
       setLikeCounts(counts);
     } catch (e) {
       console.error(e);
@@ -66,32 +112,23 @@ export default function PostsPage() {
     load();
   }, [load]);
 
-  // Toggle like and count (and save to backend)
   const toggleLike = async (postid) => {
     setLikedPosts((prev) => {
-      const alreadyLiked = prev[postid];
+      const already = !!prev[postid];
       setLikeCounts((counts) => ({
         ...counts,
-        [postid]: Math.max(0, (counts[postid] || 0) + (alreadyLiked ? -1 : 1)),
+        [postid]: Math.max(0, (counts[postid] || 0) + (already ? -1 : 1)),
       }));
-      return {
-        ...prev,
-        [postid]: !alreadyLiked,
-      };
+      return { ...prev, [postid]: !already };
     });
-
     const likedNow = !likedPosts[postid];
-    await updateLikeStatus(postid, likedNow); // backend sync
+    await updateLikeStatus(postid, likedNow).catch(() => {});
   };
 
   const handleFollowToggle = (username) => {
-    setFollowStatus((prev) => ({
-      ...prev,
-      [username]: !prev[username],
-    }));
+    setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));
   };
 
-  // Open comment view
   const handleComment = async (postid) => {
     try {
       setLoading(true);
@@ -106,9 +143,11 @@ export default function PostsPage() {
 
   const goBackToFeed = () => setViewingPost(null);
 
-  // Comment View (when a post is opened)
+  // Comment/Post detail view
   if (viewingPost) {
-    const imgUri = toImageUri(viewingPost.datapath);
+    const isVideo = inferIsVideo(viewingPost);
+    const mediaUri = toImageUri(viewingPost.datapath);
+    const poster = viewingPost.thumbpath ? toImageUri(viewingPost.thumbpath) : undefined;
     const profilePic =
       viewingPost.profilepic && viewingPost.profilepic !== ""
         ? toImageUri(viewingPost.profilepic)
@@ -116,71 +155,33 @@ export default function PostsPage() {
 
     return (
       <ScrollView style={[styles.app, { paddingTop: 10 }]}>
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
-        >
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}>
           <TouchableOpacity onPress={goBackToFeed}>
             <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
           </TouchableOpacity>
           <Image
             source={{ uri: profilePic }}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              marginHorizontal: 10,
-              borderWidth: 1.5,
-              borderColor: "#9CA3AF",
-            }}
+            style={{ width: 38, height: 38, borderRadius: 19, marginHorizontal: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
           />
-          <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
-            @{viewingPost.postedby}
-          </Text>
+          <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{viewingPost.postedby}</Text>
         </View>
 
-        {/* Post image */}
-        <Image
-          source={{ uri: imgUri }}
-          style={{
-            width: width,
-            height: width,
-            resizeMode: "cover",
-          }}
-        />
+        <View style={{ backgroundColor: "#0B1220" }}>
+          <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
+        </View>
 
-        {/* Caption */}
         <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
           <Text style={{ color: "#E5E7EB" }}>
-            <Text style={{ fontWeight: "bold" }}>
-              @{viewingPost.postedby}{" "}
-            </Text>
+            <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
             {viewingPost.description}
           </Text>
         </View>
 
-        {/* Comments */}
         <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
-          <Text
-            style={{
-              color: "#9CA3AF",
-              fontWeight: "bold",
-              marginBottom: 8,
-            }}
-          >
-            Comments
-          </Text>
-          {viewingPost.comments && viewingPost.comments.length > 0 ? (
+          <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
+          {viewingPost.comments?.length ? (
             viewingPost.comments.map((c) => (
-              <Text
-                key={c.commentid}
-                style={{ color: "#E5E7EB", marginBottom: 6 }}
-              >
+              <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
                 <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
                 {c.text}
               </Text>
@@ -193,26 +194,26 @@ export default function PostsPage() {
     );
   }
 
-  // Main Feed View
+  // Main feed
   return (
     <View style={[styles.app, { paddingTop: 10 }]}>
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#60A5FA"
-          style={{ marginTop: 40 }}
-        />
+        <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={posts}
           renderItem={({ item }) => {
-            const imgUri = toImageUri(item.datapath);
             const profilePic =
               item.profilepic && item.profilepic !== ""
                 ? toImageUri(item.profilepic)
                 : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
-            const isLiked = likedPosts[item.postid];
-            const isFollowing = followStatus[item.postedby];
+
+            const isVideo = inferIsVideo(item);
+            const mediaUri = toImageUri(item.datapath);
+            const poster = item.thumbpath ? toImageUri(item.thumbpath) : undefined;
+
+            const isLiked = !!likedPosts[item.postid];
+            const isFollowing = !!followStatus[item.postedby];
 
             return (
               <View
@@ -245,12 +246,9 @@ export default function PostsPage() {
                         borderColor: "#9CA3AF",
                       }}
                     />
-                    <TouchableOpacity
-                      onPress={() => console.log(`Clicked on @${item.postedby}`)} // makes the username clickable
-                    >
+                    <TouchableOpacity onPress={() => console.log(`Clicked on @${item.postedby}`)}>
                       <Text style={styles.username}>@{item.postedby}</Text>
                     </TouchableOpacity>
-
                   </View>
 
                   <TouchableOpacity
@@ -268,17 +266,12 @@ export default function PostsPage() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Post image */}
-                <Image
-                  source={{ uri: imgUri }}
-                  style={{
-                    width: imageSize,
-                    height: imageSize,
-                    resizeMode: "cover",
-                  }}
-                />
+                {/* Media (image or video) */}
+                <View style={{ backgroundColor: "#0B1220" }}>
+                  <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
+                </View>
 
-                {/* Icons */}
+                {/* Actions */}
                 <View
                   style={{
                     flexDirection: "row",
@@ -312,24 +305,16 @@ export default function PostsPage() {
 
                 {/* Likes + Caption */}
                 <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
-                  <Text
-                    style={{
-                      color: "#E5E7EB",
-                      marginBottom: 3,
-                      fontWeight: "600",
-                    }}
-                  >
+                  <Text style={{ color: "#E5E7EB", marginBottom: 3, fontWeight: "600" }}>
                     {likeCounts[item.postid] || 0} likes
                   </Text>
 
-                  {item.description ? (
+                  {!!item.description && (
                     <Text style={{ color: "#E5E7EB", marginTop: 4 }}>
-                      <Text style={{ fontWeight: "bold" }}>
-                        @{item.postedby}{" "}
-                      </Text>
+                      <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
                       {item.description}
                     </Text>
-                  ) : null}
+                  )}
                 </View>
               </View>
             );
@@ -347,20 +332,14 @@ export default function PostsPage() {
             />
           }
           ListEmptyComponent={
-            <Text
-              style={{
-                color: "#9CA3AF",
-                textAlign: "center",
-                marginTop: 24,
-              }}
-            >
+            <Text style={{ color: "#9CA3AF", textAlign: "center", marginTop: 24 }}>
               No posts yet.
             </Text>
           }
         />
       )}
 
-      {/* Share feature */}
+      {/* Share Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -396,17 +375,6 @@ export default function PostsPage() {
               Share Post
             </Text>
 
-            <Text
-              style={{
-                color: "#9CA3AF",
-                marginBottom: 12,
-                textAlign: "center",
-              }}
-            >
-              Select someone to share with:
-            </Text>
-
-            {/* Example static list (replace with backend data later) */}
             {["dylan", "journey", "hassaan", "fariza"].map((user) => (
               <TouchableOpacity
                 key={user}
@@ -416,9 +384,7 @@ export default function PostsPage() {
                   borderBottomColor: "#374151",
                 }}
                 onPress={() => {
-                  console.log(
-                    `Shared post ${shareTargetPost?.postid} with ${user}`
-                  );
+                  console.log(`Shared post ${shareTargetPost?.postid} with ${user}`);
                   setShareModalVisible(false);
                 }}
               >
