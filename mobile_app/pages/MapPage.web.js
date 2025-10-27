@@ -7,9 +7,11 @@ import { loadGoogleMaps } from "../utils/googleMapsLoader";
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
+const DENSITY_THRESHOLD = 3;
+const CLUSTER_RADIUS_M = 150; // show heatmap when >= this many posts are visible
+const ZOOM_THRESHOLD = 14;
 
 // Build a usable image URL from a post's datapath (mirrors PostsPage logic)
-
 
 const Uluru = { lat: -25.344, lng: 131.031 };
 const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
@@ -17,7 +19,7 @@ const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 const isImagePath = (s = "") => /\.(jpe?g|png|webp|gif)$/i.test(s);
 const isVideoPath = (s = "") => /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(s);
 
-// same URL builder you use elsewhere
+// same URL builder 
 function toImageUri(datapath) {
   if (!datapath) return null;
   if (/^https?:\/\//i.test(datapath)) return datapath;
@@ -38,6 +40,18 @@ function pickPreviewAsset(p) {
     return tp || null; // video => use thumbnail or nothing (fallback to placeholder)
   }
   return dp || null;   // image => use image path
+}
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 /* function loadGoogle() {
@@ -129,7 +143,7 @@ export default function MapPage() {
         }
         if (!HeatmapLayer) throw new Error("Heatmap library not available");
 
-        // convert your points into LatLng
+        // convert  points into LatLng
         const heatData = points
           .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
           .map((p) => new google.maps.LatLng(p.lat, p.lng));
@@ -149,7 +163,7 @@ export default function MapPage() {
         // create the heatmap (we will toggle visibility based on viewport density)
         const heatmap = new HeatmapLayer({
           data: heatData,
-          map, // start visible; updateLayerVisibility will switch as needed
+          map: null, // start hidden; we will toggle based on viewport density
           dissipating: true,
           radius: 28,
           opacity: 0.6,
@@ -195,7 +209,7 @@ export default function MapPage() {
 
         // Create image-backed markers using AdvancedMarkerElement content
         const placeholder = `data:image/svg+xml;utf8,${encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="100%" height="100%" rx="20" ry="20" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="48"><rect width="100%" height="100%" rx="0" ry="0" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
         )}`;
 
  const markers = points.map((p) => {
@@ -210,24 +224,73 @@ export default function MapPage() {
  }
    img.src = url || placeholder;
    img.alt = p.postedby ? `@${p.postedby}` : "post";
-   img.style.width = "40px";
-   img.style.height = "40px";
+   img.style.width = "32px";
+   img.style.height = "48px";
    img.style.objectFit = "cover";
-   img.style.borderRadius = "50%";
+   img.style.borderRadius = "0";
    img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
    img.loading = "lazy";
    // if the image fails (e.g., no thumb yet / wrong filename), show placeholder
    img.onerror = () => { img.src = placeholder; };
 
-   return new google.maps.marker.AdvancedMarkerElement({
+   const mk = new google.maps.marker.AdvancedMarkerElement({
      map,
      position: { lat: p.lat, lng: p.lng },
      content: img,
      title: `@${p.postedby}`,
    });
+   // click to open the post modal
+   if (mk.addListener) {
+     mk.addListener("gmp-click", () => setSelectedPost(p));
+   }
+   // fallback: also allow clicking the image content
+   img.addEventListener("click", () => setSelectedPost(p));
+   return mk;
  });
 
-        new MarkerClusterer({ markers, map });
+markersRef.current = markers;
+
+const DLV_MAP = map; // use the in-scope map instance for visibility logic
+function updateLayerVisibility() {
+  const b = DLV_MAP.getBounds();
+  if (!b) return;
+
+  const visible = points.filter((p) =>
+    Number.isFinite(p.lat) &&
+    Number.isFinite(p.lng) &&
+    b.contains(new google.maps.LatLng(p.lat, p.lng))
+  );
+
+  let crowded = false;
+  for (let i = 0; i < visible.length && !crowded; i++) {
+    let count = 1;
+    const a = visible[i];
+    for (let j = i + 1; j < visible.length; j++) {
+      const d = haversineMeters(a.lat, a.lng, visible[j].lat, visible[j].lng);
+      if (d <= CLUSTER_RADIUS_M) {
+        count++;
+        if (count >= DENSITY_THRESHOLD) {
+          crowded = true;
+          break;
+        }
+      }
+    }
+  }
+
+  const zoomLevel = DLV_MAP.getZoom() || 0;
+  const hideMarkers = crowded || zoomLevel < ZOOM_THRESHOLD;
+
+  if (heatmapRef.current) heatmapRef.current.setMap(hideMarkers ? DLV_MAP : null);
+
+  if (markersRef.current && markersRef.current.length) {
+    for (const m of markersRef.current) m.setMap(hideMarkers ? null : DLV_MAP);
+  }
+}
+
+// initial apply and on viewport changes
+updateLayerVisibility();
+const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
+
       } catch (e) {
         console.error(e);
         setError("Failed to load map or locations");
@@ -236,6 +299,11 @@ export default function MapPage() {
 
     return () => {
       cancelled = true;
+      try {
+        if (typeof idleListener !== "undefined" && idleListener) {
+          google.maps.event.removeListener(idleListener);
+        }
+      } catch {}
       if (heatmapRef.current) {
         heatmapRef.current.setMap(null);
         heatmapRef.current = null;
@@ -301,16 +369,40 @@ export default function MapPage() {
             >
               <View style={styles.postWrapper}>
                 <View style={styles.postBox}>
-                  <Image
-                    source={{ uri: toImageUri(selectedPost.datapath) }}
-                    style={{
-                      width: "100%",
-                      height: undefined,
-                      aspectRatio: 1,
-                      resizeMode: "cover",
-                      borderRadius: 10,
-                    }}
-                  />
+                  { (Number(selectedPost?.posttype) === 1 || isVideoPath(String(selectedPost?.datapath || ""))) ? (
+                    <video
+                      key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
+                      src={toImageUri(selectedPost.datapath)}
+                      poster={toImageUri(selectedPost.thumbpath)}
+                      controls
+                      playsInline
+                      autoPlay
+                      muted
+                      loop
+                      preload="metadata"
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: 10,
+                        display: "block",
+                        maxHeight: 750,
+                        objectFit: "contain"
+                      }}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <Image
+                      source={{ uri: toImageUri(selectedPost.datapath) }}
+                      style={{
+                        width: "100%",
+                        height: undefined,
+                        aspectRatio: 1,
+                        resizeMode: "cover",
+                        borderRadius: 10,
+                      }}
+                    />
+                  )}
                 </View>
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
                   Posted by: {selectedPost.postedby || "Unknown"}
