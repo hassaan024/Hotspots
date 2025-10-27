@@ -75,6 +75,18 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
   });
 } */
 
+function injectNoControlsCSS() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("no-media-controls")) return;
+  const style = document.createElement("style");
+  style.id = "no-media-controls";
+  style.textContent = `
+    video::-webkit-media-controls-enclosure { display: none !important; }
+    video::-webkit-media-controls { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -86,6 +98,7 @@ export default function MapPage() {
 
   useEffect(() => {
     let cancelled = false;
+    injectNoControlsCSS();
 
     (async () => {
       try {
@@ -375,12 +388,13 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                       key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
                       src={toImageUri(selectedPost.datapath)}
                       poster={toImageUri(selectedPost.thumbpath)}
-                      controls
                       playsInline
                       autoPlay
                       muted
                       loop
-                      preload="metadata"
+                      controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
                       style={{
                         width: "100%",
                         height: "auto",

@@ -30,6 +30,18 @@ const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 let VideoComp = null;            // lazy for native
 try { VideoComp = require("expo-av").Video; } catch {}
 
+function injectNoControlsCSS() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("no-media-controls")) return;
+  const style = document.createElement("style");
+  style.id = "no-media-controls";
+  style.textContent = `
+    video::-webkit-media-controls-enclosure { display: none !important; }
+    video::-webkit-media-controls { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 /** absolute-URI builder that mirrors your /uploads layout */
 /** Normalize any path/URL to an absolute URI without double-prefixing */
 function toAbsUri(path) {
@@ -97,10 +109,18 @@ if (isWeb) {
   return (
     <video
       src={uri}
-      controls
       poster={poster || undefined}
-      style={{ width: size, height: "auto", display: "block", objectFit: "cover" }} // ⬅️ no fixed height
-    />
+      playsInline
+      autoPlay
+      muted
+      loop
+      controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+      disablePictureInPicture
+      onContextMenu={(e) => e.preventDefault()}
+      style={{ width: size, height: "auto", display: "block", objectFit: "cover" }}
+    >
+      Your browser does not support the video tag.
+    </video>
   );
 }
 
@@ -108,14 +128,17 @@ if (isWeb) {
 return VideoComp ? (
   <VideoComp
     source={{ uri }}
-    style={{ width: size, height: size / ar }}             // ⬅️ derived height
-    useNativeControls
+    style={{ width: size, height: size / ar }}
     resizeMode="cover"
     posterSource={poster ? { uri: poster } : undefined}
     onLoad={({ naturalSize }) => {
       const w = naturalSize?.width, h = naturalSize?.height;
       if (w && h) setAr(w / h);
     }}
+    useNativeControls={false}
+    shouldPlay
+    isLooping
+    isMuted
   />
 ) : null;
 };
@@ -182,6 +205,7 @@ const postToUri = (p) => {
   }, [user.username]);
 
   useEffect(() => {
+    injectNoControlsCSS();
     fetchPosts();
     fetchFollowCounts();
   }, [fetchPosts, fetchFollowCounts]);
