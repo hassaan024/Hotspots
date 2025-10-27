@@ -21,6 +21,7 @@ export const styles = StyleSheet.create({
     paddingTop: 12,
   },
 
+  /* ===== Header Card ===== */
   headerCard: {
     backgroundColor: colors.panel,
     borderColor: colors.panelBorder,
@@ -28,7 +29,6 @@ export const styles = StyleSheet.create({
     borderRadius: cardRadius,
     padding: 14,
     marginBottom: 12,
-
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -39,27 +39,6 @@ export const styles = StyleSheet.create({
       android: { elevation: 3 },
     }),
   },
-
-  gridCard: {
-    flex: 1,
-    backgroundColor: colors.panel,
-    borderColor: colors.panelBorder,
-    borderWidth: 1,
-    borderRadius: cardRadius,
-    padding: 6,
-
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-      },
-      android: { elevation: 2 },
-    }),
-  },
-
-  /* Header */
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -97,8 +76,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: Platform.OS === "ios" ? "AvenirNext-Regular" : "sans-serif",
   },
-
-  /* Name */
   nameRow: {
     marginTop: 12,
   },
@@ -109,22 +86,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  editBtn: {
-    alignSelf: "stretch",
-    backgroundColor: colors.btnBg,
-    borderColor: colors.panelBorder,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  editBtnText: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: "600",
-  },
-
-  // New logout button
+  // logout button (already themed)
   logoutBtn: {
     alignSelf: "stretch",
     backgroundColor: "#151b24",
@@ -133,7 +95,6 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
-
     ...Platform.select({
       ios: {
         shadowColor: colors.accent,
@@ -151,7 +112,24 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  /* post grid */
+  /* ===== Grid Card ===== */
+  gridCard: {
+    flex: 1,
+    backgroundColor: colors.panel,
+    borderColor: colors.panelBorder,
+    borderWidth: 1,
+    borderRadius: cardRadius,
+    padding: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 2 },
+    }),
+  },
   gridContainer: {
     paddingTop: 2,
   },
@@ -174,4 +152,97 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.panelBorder,
     marginTop: 12,
   },
+  viewerOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  
+  // Blur sits at the very back
+  viewerBlur: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  
+  // Close button ABOVE blur & image
+  viewerCloseBtn: {
+    position: "absolute",
+    top: 24,
+    right: 16,
+    zIndex: 3, // higher than card/actions
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(17,17,17,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.panelBorder,
+  },
+  
+  // Image card ABOVE blur (zIndex 1)
+  viewerCard: {
+    zIndex: 1,
+    maxWidth: "96%",
+    maxHeight: "80%",
+    backgroundColor: colors.panel,
+    borderColor: colors.panelBorder,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 10 },
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  
+  // Make image fit the box (no cropping)
+  viewerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  
+  viewerLoading: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.15)",
+  },
+  
+  // Actions ABOVE blur & card (zIndex 2)
+  viewerActions: {
+    position: "absolute",
+    bottom: 28,
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: 18,
+    backgroundColor: "rgba(18,24,33,0.75)",
+    borderColor: colors.panelBorder,
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    zIndex: 2,
+  },
+  viewerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },  
 });
