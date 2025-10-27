@@ -406,7 +406,7 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                   )}
                 </View>
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
-                  Posted by: {selectedPost.postedby || "Unknown"}
+                   {selectedPost.postedby || "Unknown"}
                 </Text>
                 <Text style={[styles.text, { marginBottom: 8 }]}>
                   {String(selectedPost?.caption || "").trim() || "(no caption)"}
