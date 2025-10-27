@@ -9,7 +9,16 @@ datasource db {
 }
 
 model users {
-  username String @id @db.VarChar(25)
-  email    String @unique(map: "users_pk") @db.VarChar(50)
-  password String @db.VarChar(255)
+  username     String @id
+  email        String @unique
+  passwordHash String
+}
+
+model followers {
+  follower    String
+  followee    String
+  followed_at DateTime @default(now()) // <-- was String; use DateTime
+
+  @@id([follower, followee]) // <-- composite PK to match your SQL
+  @@map("followers") // maps to your existing table name
 }

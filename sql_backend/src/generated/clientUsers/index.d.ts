@@ -18,10 +18,15 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
  * 
  */
 export type users = $Result.DefaultSelection<Prisma.$usersPayload>
+/**
+ * Model followers
+ * 
+ */
+export type followers = $Result.DefaultSelection<Prisma.$followersPayload>
 
 /**
  * ##  Prisma Client ʲˢ
- *
+ * 
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
@@ -30,19 +35,19 @@ export type users = $Result.DefaultSelection<Prisma.$usersPayload>
  * const users = await prisma.users.findMany()
  * ```
  *
- *
+ * 
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
  */
 export class PrismaClient<
   ClientOptions extends Prisma.PrismaClientOptions = Prisma.PrismaClientOptions,
-  const U = 'log' extends keyof ClientOptions ? ClientOptions['log'] extends Array<Prisma.LogLevel | Prisma.LogDefinition> ? Prisma.GetEvents<ClientOptions['log']> : never : never,
+  U = 'log' extends keyof ClientOptions ? ClientOptions['log'] extends Array<Prisma.LogLevel | Prisma.LogDefinition> ? Prisma.GetEvents<ClientOptions['log']> : never : never,
   ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs
 > {
   [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['other'] }
 
     /**
    * ##  Prisma Client ʲˢ
-   *
+   * 
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
@@ -51,12 +56,12 @@ export class PrismaClient<
    * const users = await prisma.users.findMany()
    * ```
    *
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
    */
 
   constructor(optionsArg ?: Prisma.Subset<ClientOptions, Prisma.PrismaClientOptions>);
-  $on<V extends U>(eventType: V, callback: (event: V extends 'query' ? Prisma.QueryEvent : Prisma.LogEvent) => void): PrismaClient;
+  $on<V extends U>(eventType: V, callback: (event: V extends 'query' ? Prisma.QueryEvent : Prisma.LogEvent) => void): void;
 
   /**
    * Connect with the database
@@ -68,13 +73,20 @@ export class PrismaClient<
    */
   $disconnect(): $Utils.JsPromise<void>;
 
+  /**
+   * Add a middleware
+   * @deprecated since 4.16.0. For new code, prefer client extensions instead.
+   * @see https://pris.ly/d/extensions
+   */
+  $use(cb: Prisma.Middleware): void
+
 /**
    * Executes a prepared raw query and returns the number of affected rows.
    * @example
    * ```
    * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -86,7 +98,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -97,7 +109,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -109,7 +121,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -133,9 +145,7 @@ export class PrismaClient<
   $transaction<R>(fn: (prisma: Omit<PrismaClient, runtime.ITXClientDenyList>) => $Utils.JsPromise<R>, options?: { maxWait?: number, timeout?: number, isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<R>
 
 
-  $extends: $Extensions.ExtendsHook<"extends", Prisma.TypeMapCb<ClientOptions>, ExtArgs, $Utils.Call<Prisma.TypeMapCb<ClientOptions>, {
-    extArgs: ExtArgs
-  }>>
+  $extends: $Extensions.ExtendsHook<"extends", Prisma.TypeMapCb, ExtArgs>
 
       /**
    * `prisma.users`: Exposes CRUD operations for the **users** model.
@@ -145,7 +155,17 @@ export class PrismaClient<
     * const users = await prisma.users.findMany()
     * ```
     */
-  get users(): Prisma.usersDelegate<ExtArgs, ClientOptions>;
+  get users(): Prisma.usersDelegate<ExtArgs>;
+
+  /**
+   * `prisma.followers`: Exposes CRUD operations for the **followers** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Followers
+    * const followers = await prisma.followers.findMany()
+    * ```
+    */
+  get followers(): Prisma.followersDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -166,6 +186,7 @@ export namespace Prisma {
   export import PrismaClientRustPanicError = runtime.PrismaClientRustPanicError
   export import PrismaClientInitializationError = runtime.PrismaClientInitializationError
   export import PrismaClientValidationError = runtime.PrismaClientValidationError
+  export import NotFoundError = runtime.NotFoundError
 
   /**
    * Re-export of sql-template-tag
@@ -186,7 +207,7 @@ export namespace Prisma {
   export type DecimalJsLike = runtime.DecimalJsLike
 
   /**
-   * Metrics
+   * Metrics 
    */
   export type Metrics = runtime.Metrics
   export type Metric<T> = runtime.Metric<T>
@@ -204,14 +225,14 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 6.16.3
-   * Query Engine version: bb420e667c1820a8c05a38023385f6cc7ef8e83a
+   * Prisma Client JS version: 5.22.0
+   * Query Engine version: 605197351a3c8bdd595af2d2a9bc3025bca48ea2
    */
   export type PrismaVersion = {
     client: string
   }
 
-  export const prismaVersion: PrismaVersion
+  export const prismaVersion: PrismaVersion 
 
   /**
    * Utility Types
@@ -227,15 +248,15 @@ export namespace Prisma {
 
   /**
    * Types of the values used to represent different kinds of `null` values when working with JSON fields.
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   namespace NullTypes {
     /**
     * Type of `Prisma.DbNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class DbNull {
@@ -245,9 +266,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.JsonNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class JsonNull {
@@ -257,9 +278,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.AnyNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class AnyNull {
@@ -270,21 +291,21 @@ export namespace Prisma {
 
   /**
    * Helper for filtering JSON entries that have `null` on the database (empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const DbNull: NullTypes.DbNull
 
   /**
    * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const JsonNull: NullTypes.JsonNull
 
   /**
    * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const AnyNull: NullTypes.AnyNull
@@ -472,7 +493,7 @@ export namespace Prisma {
   type AtLeast<O extends object, K extends string> = NoExpand<
     O extends unknown
     ? | (K extends keyof O ? { [P in K]: O[P] } & O : O)
-      | {[P in keyof O as P extends K ? P : never]-?: O[P]} & O
+      | {[P in keyof O as P extends K ? K : never]-?: O[P]} & O
     : never>;
 
   type _Strict<U, _U = U> = U extends unknown ? U & OptionalFlat<_Record<Exclude<Keys<_U>, keyof U>, never>> : never;
@@ -586,7 +607,8 @@ export namespace Prisma {
 
 
   export const ModelName: {
-    users: 'users'
+    users: 'users',
+    followers: 'followers'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -596,16 +618,13 @@ export namespace Prisma {
     db?: Datasource
   }
 
-  interface TypeMapCb<ClientOptions = {}> extends $Utils.Fn<{extArgs: $Extensions.InternalArgs }, $Utils.Record<string, any>> {
-    returns: Prisma.TypeMap<this['params']['extArgs'], ClientOptions extends { omit: infer OmitOptions } ? OmitOptions : {}>
+  interface TypeMapCb extends $Utils.Fn<{extArgs: $Extensions.InternalArgs, clientOptions: PrismaClientOptions }, $Utils.Record<string, any>> {
+    returns: Prisma.TypeMap<this['params']['extArgs'], this['params']['clientOptions']>
   }
 
-  export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> = {
-    globalOmitOptions: {
-      omit: GlobalOmitOptions
-    }
+  export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "users"
+      modelProps: "users" | "followers"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -675,6 +694,72 @@ export namespace Prisma {
           }
         }
       }
+      followers: {
+        payload: Prisma.$followersPayload<ExtArgs>
+        fields: Prisma.followersFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.followersFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.followersFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          findFirst: {
+            args: Prisma.followersFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.followersFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          findMany: {
+            args: Prisma.followersFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>[]
+          }
+          create: {
+            args: Prisma.followersCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          createMany: {
+            args: Prisma.followersCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.followersDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          update: {
+            args: Prisma.followersUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          deleteMany: {
+            args: Prisma.followersDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.followersUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.followersUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$followersPayload>
+          }
+          aggregate: {
+            args: Prisma.FollowersAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFollowers>
+          }
+          groupBy: {
+            args: Prisma.followersGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FollowersGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.followersCountArgs<ExtArgs>
+            result: $Utils.Optional<FollowersCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -718,24 +803,16 @@ export namespace Prisma {
     /**
      * @example
      * ```
-     * // Shorthand for `emit: 'stdout'`
+     * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
      * 
-     * // Emit as events only
+     * // Emit as events
      * log: [
-     *   { emit: 'event', level: 'query' },
-     *   { emit: 'event', level: 'info' },
-     *   { emit: 'event', level: 'warn' }
-     *   { emit: 'event', level: 'error' }
+     *   { emit: 'stdout', level: 'query' },
+     *   { emit: 'stdout', level: 'info' },
+     *   { emit: 'stdout', level: 'warn' }
+     *   { emit: 'stdout', level: 'error' }
      * ]
-     * 
-     * / Emit as events and log to stdout
-     * og: [
-     *  { emit: 'stdout', level: 'query' },
-     *  { emit: 'stdout', level: 'info' },
-     *  { emit: 'stdout', level: 'warn' }
-     *  { emit: 'stdout', level: 'error' }
-     * 
      * ```
      * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/logging#the-log-option).
      */
@@ -750,29 +827,8 @@ export namespace Prisma {
       timeout?: number
       isolationLevel?: Prisma.TransactionIsolationLevel
     }
-    /**
-     * Instance of a Driver Adapter, e.g., like one provided by `@prisma/adapter-planetscale`
-     */
-    adapter?: runtime.SqlDriverAdapterFactory | null
-    /**
-     * Global configuration for omitting model fields by default.
-     * 
-     * @example
-     * ```
-     * const prisma = new PrismaClient({
-     *   omit: {
-     *     user: {
-     *       password: true
-     *     }
-     *   }
-     * })
-     * ```
-     */
-    omit?: Prisma.GlobalOmitConfig
   }
-  export type GlobalOmitConfig = {
-    users?: usersOmit
-  }
+
 
   /* Types for Logging */
   export type LogLevel = 'info' | 'query' | 'warn' | 'error'
@@ -781,15 +837,10 @@ export namespace Prisma {
     emit: 'stdout' | 'event'
   }
 
-  export type CheckIsLogLevel<T> = T extends LogLevel ? T : never;
-
-  export type GetLogType<T> = CheckIsLogLevel<
-    T extends LogDefinition ? T['level'] : T
-  >;
-
-  export type GetEvents<T extends any[]> = T extends Array<LogLevel | LogDefinition>
-    ? GetLogType<T[number]>
-    : never;
+  export type GetLogType<T extends LogLevel | LogDefinition> = T extends LogDefinition ? T['emit'] extends 'event' ? T['level'] : never : never
+  export type GetEvents<T extends any> = T extends Array<LogLevel | LogDefinition> ?
+    GetLogType<T[0]> | GetLogType<T[1]> | GetLogType<T[2]> | GetLogType<T[3]>
+    : never
 
   export type QueryEvent = {
     timestamp: Date
@@ -818,7 +869,6 @@ export namespace Prisma {
     | 'createManyAndReturn'
     | 'update'
     | 'updateMany'
-    | 'updateManyAndReturn'
     | 'upsert'
     | 'delete'
     | 'deleteMany'
@@ -829,6 +879,25 @@ export namespace Prisma {
     | 'runCommandRaw'
     | 'findRaw'
     | 'groupBy'
+
+  /**
+   * These options are being passed into the middleware as "params"
+   */
+  export type MiddlewareParams = {
+    model?: ModelName
+    action: PrismaAction
+    args: any
+    dataPath: string[]
+    runInTransaction: boolean
+  }
+
+  /**
+   * The `T` type makes sure, that the `return proceed` is not forgotten in the middleware implementation
+   */
+  export type Middleware<T = any> = (
+    params: MiddlewareParams,
+    next: (params: MiddlewareParams) => $Utils.JsPromise<T>,
+  ) => $Utils.JsPromise<T>
 
   // tested in getLogLevel.test.ts
   export function getLogLevel(log: Array<LogLevel | LogDefinition>): LogLevel | undefined;
@@ -865,19 +934,19 @@ export namespace Prisma {
   export type UsersMinAggregateOutputType = {
     username: string | null
     email: string | null
-    password: string | null
+    passwordHash: string | null
   }
 
   export type UsersMaxAggregateOutputType = {
     username: string | null
     email: string | null
-    password: string | null
+    passwordHash: string | null
   }
 
   export type UsersCountAggregateOutputType = {
     username: number
     email: number
-    password: number
+    passwordHash: number
     _all: number
   }
 
@@ -885,19 +954,19 @@ export namespace Prisma {
   export type UsersMinAggregateInputType = {
     username?: true
     email?: true
-    password?: true
+    passwordHash?: true
   }
 
   export type UsersMaxAggregateInputType = {
     username?: true
     email?: true
-    password?: true
+    passwordHash?: true
   }
 
   export type UsersCountAggregateInputType = {
     username?: true
     email?: true
-    password?: true
+    passwordHash?: true
     _all?: true
   }
 
@@ -976,7 +1045,7 @@ export namespace Prisma {
   export type UsersGroupByOutputType = {
     username: string
     email: string
-    password: string
+    passwordHash: string
     _count: UsersCountAggregateOutputType | null
     _min: UsersMinAggregateOutputType | null
     _max: UsersMaxAggregateOutputType | null
@@ -999,18 +1068,16 @@ export namespace Prisma {
   export type usersSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     username?: boolean
     email?: boolean
-    password?: boolean
+    passwordHash?: boolean
   }, ExtArgs["result"]["users"]>
-
 
 
   export type usersSelectScalar = {
     username?: boolean
     email?: boolean
-    password?: boolean
+    passwordHash?: boolean
   }
 
-  export type usersOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"username" | "email" | "password", ExtArgs["result"]["users"]>
 
   export type $usersPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "users"
@@ -1018,19 +1085,19 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       username: string
       email: string
-      password: string
+      passwordHash: string
     }, ExtArgs["result"]["users"]>
     composites: {}
   }
 
   type usersGetPayload<S extends boolean | null | undefined | usersDefaultArgs> = $Result.GetResult<Prisma.$usersPayload, S>
 
-  type usersCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<usersFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+  type usersCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<usersFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: UsersCountAggregateInputType | true
     }
 
-  export interface usersDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+  export interface usersDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
     [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['users'], meta: { name: 'users' } }
     /**
      * Find zero or one Users that matches the filter.
@@ -1043,10 +1110,10 @@ export namespace Prisma {
      *   }
      * })
      */
-    findUnique<T extends usersFindUniqueArgs>(args: SelectSubset<T, usersFindUniqueArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findUnique<T extends usersFindUniqueArgs>(args: SelectSubset<T, usersFindUniqueArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one Users that matches the filter or throw an error with `error.code='P2025'`
+     * Find one Users that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {usersFindUniqueOrThrowArgs} args - Arguments to find a Users
      * @example
@@ -1057,7 +1124,7 @@ export namespace Prisma {
      *   }
      * })
      */
-    findUniqueOrThrow<T extends usersFindUniqueOrThrowArgs>(args: SelectSubset<T, usersFindUniqueOrThrowArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findUniqueOrThrow<T extends usersFindUniqueOrThrowArgs>(args: SelectSubset<T, usersFindUniqueOrThrowArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
 
     /**
      * Find the first Users that matches the filter.
@@ -1072,7 +1139,7 @@ export namespace Prisma {
      *   }
      * })
      */
-    findFirst<T extends usersFindFirstArgs>(args?: SelectSubset<T, usersFindFirstArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findFirst<T extends usersFindFirstArgs>(args?: SelectSubset<T, usersFindFirstArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
 
     /**
      * Find the first Users that matches the filter or
@@ -1088,7 +1155,7 @@ export namespace Prisma {
      *   }
      * })
      */
-    findFirstOrThrow<T extends usersFindFirstOrThrowArgs>(args?: SelectSubset<T, usersFindFirstOrThrowArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findFirstOrThrow<T extends usersFindFirstOrThrowArgs>(args?: SelectSubset<T, usersFindFirstOrThrowArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
 
     /**
      * Find zero or more Users that matches the filter.
@@ -1106,7 +1173,7 @@ export namespace Prisma {
      * const usersWithUsernameOnly = await prisma.users.findMany({ select: { username: true } })
      * 
      */
-    findMany<T extends usersFindManyArgs>(args?: SelectSubset<T, usersFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+    findMany<T extends usersFindManyArgs>(args?: SelectSubset<T, usersFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findMany">>
 
     /**
      * Create a Users.
@@ -1120,7 +1187,7 @@ export namespace Prisma {
      * })
      * 
      */
-    create<T extends usersCreateArgs>(args: SelectSubset<T, usersCreateArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    create<T extends usersCreateArgs>(args: SelectSubset<T, usersCreateArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
     /**
      * Create many Users.
@@ -1148,7 +1215,7 @@ export namespace Prisma {
      * })
      * 
      */
-    delete<T extends usersDeleteArgs>(args: SelectSubset<T, usersDeleteArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    delete<T extends usersDeleteArgs>(args: SelectSubset<T, usersDeleteArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
     /**
      * Update one Users.
@@ -1165,7 +1232,7 @@ export namespace Prisma {
      * })
      * 
      */
-    update<T extends usersUpdateArgs>(args: SelectSubset<T, usersUpdateArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    update<T extends usersUpdateArgs>(args: SelectSubset<T, usersUpdateArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
     /**
      * Delete zero or more Users.
@@ -1217,7 +1284,7 @@ export namespace Prisma {
      *   }
      * })
      */
-    upsert<T extends usersUpsertArgs>(args: SelectSubset<T, usersUpsertArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    upsert<T extends usersUpsertArgs>(args: SelectSubset<T, usersUpsertArgs<ExtArgs>>): Prisma__usersClient<$Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
 
 
     /**
@@ -1357,7 +1424,7 @@ export namespace Prisma {
    * Because we want to prevent naming conflicts as mentioned in
    * https://github.com/prisma/prisma-client-js/issues/707
    */
-  export interface Prisma__usersClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+  export interface Prisma__usersClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1386,11 +1453,11 @@ export namespace Prisma {
 
   /**
    * Fields of the users model
-   */
+   */ 
   interface usersFieldRefs {
     readonly username: FieldRef<"users", 'String'>
     readonly email: FieldRef<"users", 'String'>
-    readonly password: FieldRef<"users", 'String'>
+    readonly passwordHash: FieldRef<"users", 'String'>
   }
     
 
@@ -1403,10 +1470,6 @@ export namespace Prisma {
      * Select specific fields to fetch from the users
      */
     select?: usersSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
     /**
      * Filter, which users to fetch.
      */
@@ -1422,10 +1485,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * Filter, which users to fetch.
      */
     where: usersWhereUniqueInput
@@ -1439,10 +1498,6 @@ export namespace Prisma {
      * Select specific fields to fetch from the users
      */
     select?: usersSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
     /**
      * Filter, which users to fetch.
      */
@@ -1488,10 +1543,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * Filter, which users to fetch.
      */
     where?: usersWhereInput
@@ -1536,10 +1587,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * Filter, which users to fetch.
      */
     where?: usersWhereInput
@@ -1579,10 +1626,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * The data needed to create a users.
      */
     data: XOR<usersCreateInput, usersUncheckedCreateInput>
@@ -1608,10 +1651,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * The data needed to update a users.
      */
     data: XOR<usersUpdateInput, usersUncheckedUpdateInput>
@@ -1633,10 +1672,6 @@ export namespace Prisma {
      * Filter which users to update
      */
     where?: usersWhereInput
-    /**
-     * Limit how many users to update.
-     */
-    limit?: number
   }
 
   /**
@@ -1647,10 +1682,6 @@ export namespace Prisma {
      * Select specific fields to fetch from the users
      */
     select?: usersSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
     /**
      * The filter to search for the users to update in case it exists.
      */
@@ -1674,10 +1705,6 @@ export namespace Prisma {
      */
     select?: usersSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the users
-     */
-    omit?: usersOmit<ExtArgs> | null
-    /**
      * Filter which users to delete.
      */
     where: usersWhereUniqueInput
@@ -1691,10 +1718,6 @@ export namespace Prisma {
      * Filter which users to delete
      */
     where?: usersWhereInput
-    /**
-     * Limit how many users to delete.
-     */
-    limit?: number
   }
 
   /**
@@ -1705,10 +1728,816 @@ export namespace Prisma {
      * Select specific fields to fetch from the users
      */
     select?: usersSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model followers
+   */
+
+  export type AggregateFollowers = {
+    _count: FollowersCountAggregateOutputType | null
+    _min: FollowersMinAggregateOutputType | null
+    _max: FollowersMaxAggregateOutputType | null
+  }
+
+  export type FollowersMinAggregateOutputType = {
+    follower: string | null
+    followee: string | null
+    followed_at: Date | null
+  }
+
+  export type FollowersMaxAggregateOutputType = {
+    follower: string | null
+    followee: string | null
+    followed_at: Date | null
+  }
+
+  export type FollowersCountAggregateOutputType = {
+    follower: number
+    followee: number
+    followed_at: number
+    _all: number
+  }
+
+
+  export type FollowersMinAggregateInputType = {
+    follower?: true
+    followee?: true
+    followed_at?: true
+  }
+
+  export type FollowersMaxAggregateInputType = {
+    follower?: true
+    followee?: true
+    followed_at?: true
+  }
+
+  export type FollowersCountAggregateInputType = {
+    follower?: true
+    followee?: true
+    followed_at?: true
+    _all?: true
+  }
+
+  export type FollowersAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Omit specific fields from the users
+     * Filter which followers to aggregate.
      */
-    omit?: usersOmit<ExtArgs> | null
+    where?: followersWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of followers to fetch.
+     */
+    orderBy?: followersOrderByWithRelationInput | followersOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: followersWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` followers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` followers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned followers
+    **/
+    _count?: true | FollowersCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FollowersMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FollowersMaxAggregateInputType
+  }
+
+  export type GetFollowersAggregateType<T extends FollowersAggregateArgs> = {
+        [P in keyof T & keyof AggregateFollowers]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFollowers[P]>
+      : GetScalarType<T[P], AggregateFollowers[P]>
+  }
+
+
+
+
+  export type followersGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: followersWhereInput
+    orderBy?: followersOrderByWithAggregationInput | followersOrderByWithAggregationInput[]
+    by: FollowersScalarFieldEnum[] | FollowersScalarFieldEnum
+    having?: followersScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FollowersCountAggregateInputType | true
+    _min?: FollowersMinAggregateInputType
+    _max?: FollowersMaxAggregateInputType
+  }
+
+  export type FollowersGroupByOutputType = {
+    follower: string
+    followee: string
+    followed_at: Date
+    _count: FollowersCountAggregateOutputType | null
+    _min: FollowersMinAggregateOutputType | null
+    _max: FollowersMaxAggregateOutputType | null
+  }
+
+  type GetFollowersGroupByPayload<T extends followersGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FollowersGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FollowersGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FollowersGroupByOutputType[P]>
+            : GetScalarType<T[P], FollowersGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type followersSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    follower?: boolean
+    followee?: boolean
+    followed_at?: boolean
+  }, ExtArgs["result"]["followers"]>
+
+
+  export type followersSelectScalar = {
+    follower?: boolean
+    followee?: boolean
+    followed_at?: boolean
+  }
+
+
+  export type $followersPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "followers"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      follower: string
+      followee: string
+      followed_at: Date
+    }, ExtArgs["result"]["followers"]>
+    composites: {}
+  }
+
+  type followersGetPayload<S extends boolean | null | undefined | followersDefaultArgs> = $Result.GetResult<Prisma.$followersPayload, S>
+
+  type followersCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<followersFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: FollowersCountAggregateInputType | true
+    }
+
+  export interface followersDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['followers'], meta: { name: 'followers' } }
+    /**
+     * Find zero or one Followers that matches the filter.
+     * @param {followersFindUniqueArgs} args - Arguments to find a Followers
+     * @example
+     * // Get one Followers
+     * const followers = await prisma.followers.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends followersFindUniqueArgs>(args: SelectSubset<T, followersFindUniqueArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one Followers that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {followersFindUniqueOrThrowArgs} args - Arguments to find a Followers
+     * @example
+     * // Get one Followers
+     * const followers = await prisma.followers.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends followersFindUniqueOrThrowArgs>(args: SelectSubset<T, followersFindUniqueOrThrowArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first Followers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersFindFirstArgs} args - Arguments to find a Followers
+     * @example
+     * // Get one Followers
+     * const followers = await prisma.followers.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends followersFindFirstArgs>(args?: SelectSubset<T, followersFindFirstArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first Followers that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersFindFirstOrThrowArgs} args - Arguments to find a Followers
+     * @example
+     * // Get one Followers
+     * const followers = await prisma.followers.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends followersFindFirstOrThrowArgs>(args?: SelectSubset<T, followersFindFirstOrThrowArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more Followers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Followers
+     * const followers = await prisma.followers.findMany()
+     * 
+     * // Get first 10 Followers
+     * const followers = await prisma.followers.findMany({ take: 10 })
+     * 
+     * // Only select the `follower`
+     * const followersWithFollowerOnly = await prisma.followers.findMany({ select: { follower: true } })
+     * 
+     */
+    findMany<T extends followersFindManyArgs>(args?: SelectSubset<T, followersFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a Followers.
+     * @param {followersCreateArgs} args - Arguments to create a Followers.
+     * @example
+     * // Create one Followers
+     * const Followers = await prisma.followers.create({
+     *   data: {
+     *     // ... data to create a Followers
+     *   }
+     * })
+     * 
+     */
+    create<T extends followersCreateArgs>(args: SelectSubset<T, followersCreateArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many Followers.
+     * @param {followersCreateManyArgs} args - Arguments to create many Followers.
+     * @example
+     * // Create many Followers
+     * const followers = await prisma.followers.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends followersCreateManyArgs>(args?: SelectSubset<T, followersCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a Followers.
+     * @param {followersDeleteArgs} args - Arguments to delete one Followers.
+     * @example
+     * // Delete one Followers
+     * const Followers = await prisma.followers.delete({
+     *   where: {
+     *     // ... filter to delete one Followers
+     *   }
+     * })
+     * 
+     */
+    delete<T extends followersDeleteArgs>(args: SelectSubset<T, followersDeleteArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one Followers.
+     * @param {followersUpdateArgs} args - Arguments to update one Followers.
+     * @example
+     * // Update one Followers
+     * const followers = await prisma.followers.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends followersUpdateArgs>(args: SelectSubset<T, followersUpdateArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more Followers.
+     * @param {followersDeleteManyArgs} args - Arguments to filter Followers to delete.
+     * @example
+     * // Delete a few Followers
+     * const { count } = await prisma.followers.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends followersDeleteManyArgs>(args?: SelectSubset<T, followersDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Followers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Followers
+     * const followers = await prisma.followers.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends followersUpdateManyArgs>(args: SelectSubset<T, followersUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Followers.
+     * @param {followersUpsertArgs} args - Arguments to update or create a Followers.
+     * @example
+     * // Update or create a Followers
+     * const followers = await prisma.followers.upsert({
+     *   create: {
+     *     // ... data to create a Followers
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Followers we want to update
+     *   }
+     * })
+     */
+    upsert<T extends followersUpsertArgs>(args: SelectSubset<T, followersUpsertArgs<ExtArgs>>): Prisma__followersClient<$Result.GetResult<Prisma.$followersPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of Followers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersCountArgs} args - Arguments to filter Followers to count.
+     * @example
+     * // Count the number of Followers
+     * const count = await prisma.followers.count({
+     *   where: {
+     *     // ... the filter for the Followers we want to count
+     *   }
+     * })
+    **/
+    count<T extends followersCountArgs>(
+      args?: Subset<T, followersCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FollowersCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Followers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FollowersAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FollowersAggregateArgs>(args: Subset<T, FollowersAggregateArgs>): Prisma.PrismaPromise<GetFollowersAggregateType<T>>
+
+    /**
+     * Group by Followers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {followersGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends followersGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: followersGroupByArgs['orderBy'] }
+        : { orderBy?: followersGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, followersGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFollowersGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the followers model
+   */
+  readonly fields: followersFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for followers.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__followersClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the followers model
+   */ 
+  interface followersFieldRefs {
+    readonly follower: FieldRef<"followers", 'String'>
+    readonly followee: FieldRef<"followers", 'String'>
+    readonly followed_at: FieldRef<"followers", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * followers findUnique
+   */
+  export type followersFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter, which followers to fetch.
+     */
+    where: followersWhereUniqueInput
+  }
+
+  /**
+   * followers findUniqueOrThrow
+   */
+  export type followersFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter, which followers to fetch.
+     */
+    where: followersWhereUniqueInput
+  }
+
+  /**
+   * followers findFirst
+   */
+  export type followersFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter, which followers to fetch.
+     */
+    where?: followersWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of followers to fetch.
+     */
+    orderBy?: followersOrderByWithRelationInput | followersOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for followers.
+     */
+    cursor?: followersWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` followers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` followers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of followers.
+     */
+    distinct?: FollowersScalarFieldEnum | FollowersScalarFieldEnum[]
+  }
+
+  /**
+   * followers findFirstOrThrow
+   */
+  export type followersFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter, which followers to fetch.
+     */
+    where?: followersWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of followers to fetch.
+     */
+    orderBy?: followersOrderByWithRelationInput | followersOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for followers.
+     */
+    cursor?: followersWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` followers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` followers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of followers.
+     */
+    distinct?: FollowersScalarFieldEnum | FollowersScalarFieldEnum[]
+  }
+
+  /**
+   * followers findMany
+   */
+  export type followersFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter, which followers to fetch.
+     */
+    where?: followersWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of followers to fetch.
+     */
+    orderBy?: followersOrderByWithRelationInput | followersOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing followers.
+     */
+    cursor?: followersWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` followers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` followers.
+     */
+    skip?: number
+    distinct?: FollowersScalarFieldEnum | FollowersScalarFieldEnum[]
+  }
+
+  /**
+   * followers create
+   */
+  export type followersCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * The data needed to create a followers.
+     */
+    data: XOR<followersCreateInput, followersUncheckedCreateInput>
+  }
+
+  /**
+   * followers createMany
+   */
+  export type followersCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many followers.
+     */
+    data: followersCreateManyInput | followersCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * followers update
+   */
+  export type followersUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * The data needed to update a followers.
+     */
+    data: XOR<followersUpdateInput, followersUncheckedUpdateInput>
+    /**
+     * Choose, which followers to update.
+     */
+    where: followersWhereUniqueInput
+  }
+
+  /**
+   * followers updateMany
+   */
+  export type followersUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update followers.
+     */
+    data: XOR<followersUpdateManyMutationInput, followersUncheckedUpdateManyInput>
+    /**
+     * Filter which followers to update
+     */
+    where?: followersWhereInput
+  }
+
+  /**
+   * followers upsert
+   */
+  export type followersUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * The filter to search for the followers to update in case it exists.
+     */
+    where: followersWhereUniqueInput
+    /**
+     * In case the followers found by the `where` argument doesn't exist, create a new followers with this data.
+     */
+    create: XOR<followersCreateInput, followersUncheckedCreateInput>
+    /**
+     * In case the followers was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<followersUpdateInput, followersUncheckedUpdateInput>
+  }
+
+  /**
+   * followers delete
+   */
+  export type followersDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
+    /**
+     * Filter which followers to delete.
+     */
+    where: followersWhereUniqueInput
+  }
+
+  /**
+   * followers deleteMany
+   */
+  export type followersDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which followers to delete
+     */
+    where?: followersWhereInput
+  }
+
+  /**
+   * followers without action
+   */
+  export type followersDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the followers
+     */
+    select?: followersSelect<ExtArgs> | null
   }
 
 
@@ -1729,10 +2558,19 @@ export namespace Prisma {
   export const UsersScalarFieldEnum: {
     username: 'username',
     email: 'email',
-    password: 'password'
+    passwordHash: 'passwordHash'
   };
 
   export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
+
+
+  export const FollowersScalarFieldEnum: {
+    follower: 'follower',
+    followee: 'followee',
+    followed_at: 'followed_at'
+  };
+
+  export type FollowersScalarFieldEnum = (typeof FollowersScalarFieldEnum)[keyof typeof FollowersScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -1743,17 +2581,8 @@ export namespace Prisma {
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-  export const usersOrderByRelevanceFieldEnum: {
-    username: 'username',
-    email: 'email',
-    password: 'password'
-  };
-
-  export type usersOrderByRelevanceFieldEnum = (typeof usersOrderByRelevanceFieldEnum)[keyof typeof usersOrderByRelevanceFieldEnum]
-
-
   /**
-   * Field references
+   * Field references 
    */
 
 
@@ -1761,6 +2590,13 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
+    
+
+
+  /**
+   * Reference to a field of type 'DateTime'
+   */
+  export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
     
 
 
@@ -1780,14 +2616,13 @@ export namespace Prisma {
     NOT?: usersWhereInput | usersWhereInput[]
     username?: StringFilter<"users"> | string
     email?: StringFilter<"users"> | string
-    password?: StringFilter<"users"> | string
+    passwordHash?: StringFilter<"users"> | string
   }
 
   export type usersOrderByWithRelationInput = {
     username?: SortOrder
     email?: SortOrder
-    password?: SortOrder
-    _relevance?: usersOrderByRelevanceInput
+    passwordHash?: SortOrder
   }
 
   export type usersWhereUniqueInput = Prisma.AtLeast<{
@@ -1796,13 +2631,13 @@ export namespace Prisma {
     AND?: usersWhereInput | usersWhereInput[]
     OR?: usersWhereInput[]
     NOT?: usersWhereInput | usersWhereInput[]
-    password?: StringFilter<"users"> | string
+    passwordHash?: StringFilter<"users"> | string
   }, "username" | "email">
 
   export type usersOrderByWithAggregationInput = {
     username?: SortOrder
     email?: SortOrder
-    password?: SortOrder
+    passwordHash?: SortOrder
     _count?: usersCountOrderByAggregateInput
     _max?: usersMaxOrderByAggregateInput
     _min?: usersMinOrderByAggregateInput
@@ -1814,49 +2649,134 @@ export namespace Prisma {
     NOT?: usersScalarWhereWithAggregatesInput | usersScalarWhereWithAggregatesInput[]
     username?: StringWithAggregatesFilter<"users"> | string
     email?: StringWithAggregatesFilter<"users"> | string
-    password?: StringWithAggregatesFilter<"users"> | string
+    passwordHash?: StringWithAggregatesFilter<"users"> | string
+  }
+
+  export type followersWhereInput = {
+    AND?: followersWhereInput | followersWhereInput[]
+    OR?: followersWhereInput[]
+    NOT?: followersWhereInput | followersWhereInput[]
+    follower?: StringFilter<"followers"> | string
+    followee?: StringFilter<"followers"> | string
+    followed_at?: DateTimeFilter<"followers"> | Date | string
+  }
+
+  export type followersOrderByWithRelationInput = {
+    follower?: SortOrder
+    followee?: SortOrder
+    followed_at?: SortOrder
+  }
+
+  export type followersWhereUniqueInput = Prisma.AtLeast<{
+    follower_followee?: followersFollowerFolloweeCompoundUniqueInput
+    AND?: followersWhereInput | followersWhereInput[]
+    OR?: followersWhereInput[]
+    NOT?: followersWhereInput | followersWhereInput[]
+    follower?: StringFilter<"followers"> | string
+    followee?: StringFilter<"followers"> | string
+    followed_at?: DateTimeFilter<"followers"> | Date | string
+  }, "follower_followee">
+
+  export type followersOrderByWithAggregationInput = {
+    follower?: SortOrder
+    followee?: SortOrder
+    followed_at?: SortOrder
+    _count?: followersCountOrderByAggregateInput
+    _max?: followersMaxOrderByAggregateInput
+    _min?: followersMinOrderByAggregateInput
+  }
+
+  export type followersScalarWhereWithAggregatesInput = {
+    AND?: followersScalarWhereWithAggregatesInput | followersScalarWhereWithAggregatesInput[]
+    OR?: followersScalarWhereWithAggregatesInput[]
+    NOT?: followersScalarWhereWithAggregatesInput | followersScalarWhereWithAggregatesInput[]
+    follower?: StringWithAggregatesFilter<"followers"> | string
+    followee?: StringWithAggregatesFilter<"followers"> | string
+    followed_at?: DateTimeWithAggregatesFilter<"followers"> | Date | string
   }
 
   export type usersCreateInput = {
     username: string
     email: string
-    password: string
+    passwordHash: string
   }
 
   export type usersUncheckedCreateInput = {
     username: string
     email: string
-    password: string
+    passwordHash: string
   }
 
   export type usersUpdateInput = {
     username?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
-    password?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type usersUncheckedUpdateInput = {
     username?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
-    password?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type usersCreateManyInput = {
     username: string
     email: string
-    password: string
+    passwordHash: string
   }
 
   export type usersUpdateManyMutationInput = {
     username?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
-    password?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type usersUncheckedUpdateManyInput = {
     username?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
-    password?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type followersCreateInput = {
+    follower: string
+    followee: string
+    followed_at?: Date | string
+  }
+
+  export type followersUncheckedCreateInput = {
+    follower: string
+    followee: string
+    followed_at?: Date | string
+  }
+
+  export type followersUpdateInput = {
+    follower?: StringFieldUpdateOperationsInput | string
+    followee?: StringFieldUpdateOperationsInput | string
+    followed_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type followersUncheckedUpdateInput = {
+    follower?: StringFieldUpdateOperationsInput | string
+    followee?: StringFieldUpdateOperationsInput | string
+    followed_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type followersCreateManyInput = {
+    follower: string
+    followee: string
+    followed_at?: Date | string
+  }
+
+  export type followersUpdateManyMutationInput = {
+    follower?: StringFieldUpdateOperationsInput | string
+    followee?: StringFieldUpdateOperationsInput | string
+    followed_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type followersUncheckedUpdateManyInput = {
+    follower?: StringFieldUpdateOperationsInput | string
+    followee?: StringFieldUpdateOperationsInput | string
+    followed_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -1870,32 +2790,25 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    search?: string
     not?: NestedStringFilter<$PrismaModel> | string
-  }
-
-  export type usersOrderByRelevanceInput = {
-    fields: usersOrderByRelevanceFieldEnum | usersOrderByRelevanceFieldEnum[]
-    sort: SortOrder
-    search: string
   }
 
   export type usersCountOrderByAggregateInput = {
     username?: SortOrder
     email?: SortOrder
-    password?: SortOrder
+    passwordHash?: SortOrder
   }
 
   export type usersMaxOrderByAggregateInput = {
     username?: SortOrder
     email?: SortOrder
-    password?: SortOrder
+    passwordHash?: SortOrder
   }
 
   export type usersMinOrderByAggregateInput = {
     username?: SortOrder
     email?: SortOrder
-    password?: SortOrder
+    passwordHash?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -1909,15 +2822,66 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    search?: string
     not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
   }
 
+  export type DateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
+
+  export type followersFollowerFolloweeCompoundUniqueInput = {
+    follower: string
+    followee: string
+  }
+
+  export type followersCountOrderByAggregateInput = {
+    follower?: SortOrder
+    followee?: SortOrder
+    followed_at?: SortOrder
+  }
+
+  export type followersMaxOrderByAggregateInput = {
+    follower?: SortOrder
+    followee?: SortOrder
+    followed_at?: SortOrder
+  }
+
+  export type followersMinOrderByAggregateInput = {
+    follower?: SortOrder
+    followee?: SortOrder
+    followed_at?: SortOrder
+  }
+
+  export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
+  }
+
+  export type DateTimeFieldUpdateOperationsInput = {
+    set?: Date | string
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -1931,7 +2895,6 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    search?: string
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
@@ -1946,7 +2909,6 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    search?: string
     not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
@@ -1964,7 +2926,44 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
+  export type NestedDateTimeFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeFilter<$PrismaModel> | Date | string
+  }
 
+  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+
+
+  /**
+   * Aliases for legacy arg types
+   */
+    /**
+     * @deprecated Use usersDefaultArgs instead
+     */
+    export type usersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = usersDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use followersDefaultArgs instead
+     */
+    export type followersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = followersDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

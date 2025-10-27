@@ -105,6 +105,33 @@ export const styles = StyleSheet.create({
   screenSub: {
     color: colors.textDim,
   },
+  /* Map */
+  mapWrapper: {
+    position: "relative",
+  },
+  mapContainer: {
+    flex: 1,
+    minHeight: 500,
+    borderRadius: 0,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  mapLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 12,
+  },
+  mapLoadingText: {
+    color: "#fff",
+    marginTop: 12,
+  },
   //everything below this is for the posts
     postWrapper: {
       width : "100%",
@@ -116,9 +143,7 @@ export const styles = StyleSheet.create({
       borderRadius: 32,
       marginVertical: 10,
       overflow: "hidden",
-
-
-
+      
     },
     username: {
       color: "#fff",
