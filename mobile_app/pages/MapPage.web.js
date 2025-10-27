@@ -407,11 +407,8 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
                   Posted by: {selectedPost.postedby || "Unknown"}
                 </Text>
-                <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>
-                  Latitude: {selectedPost.lat}
-                </Text>
-                <Text style={{ color: "#fff", fontSize: 16 }}>
-                  Longitude: {selectedPost.lng}
+                <Text style={[styles.text, { marginBottom: 8 }]}>
+                  {String(selectedPost?.caption || "").trim() || "(no caption)"}
                 </Text>
               </View>
             </TouchableOpacity>
