@@ -8,11 +8,16 @@ import {
   ActivityIndicator,
   Dimensions,
   TouchableOpacity,
-  Share,
   ScrollView,
+  Modal,
 } from "react-native";
 import { styles } from "../styles";
-import { listPosts, API_BASE, getPostWithComments } from "../components/api";
+import {
+  listPosts,
+  API_BASE,
+  getPostWithComments,
+  updateLikeStatus,
+} from "../components/api";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
@@ -34,6 +39,8 @@ export default function PostsPage() {
   const [likeCounts, setLikeCounts] = useState({});
   const [followStatus, setFollowStatus] = useState({});
   const [viewingPost, setViewingPost] = useState(null); // shows comment view
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareTargetPost, setShareTargetPost] = useState(null);
 
   // Load posts
   const load = useCallback(async () => {
@@ -59,8 +66,8 @@ export default function PostsPage() {
     load();
   }, [load]);
 
-  // Toggle like and count
-  const toggleLike = (postid) => {
+  // Toggle like and count (and save to backend)
+  const toggleLike = async (postid) => {
     setLikedPosts((prev) => {
       const alreadyLiked = prev[postid];
       setLikeCounts((counts) => ({
@@ -72,6 +79,9 @@ export default function PostsPage() {
         [postid]: !alreadyLiked,
       };
     });
+
+    const likedNow = !likedPosts[postid];
+    await updateLikeStatus(postid, likedNow); // backend sync
   };
 
   const handleFollowToggle = (username) => {
@@ -91,20 +101,6 @@ export default function PostsPage() {
       console.error("Error loading comments:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleShare = async (post) => {
-    try {
-      const imgUri = toImageUri(post.datapath);
-      const message = post.description
-        ? `${post.description}\n\nCheck out this post by @${post.postedby}!`
-        : `Check out this post by @${post.postedby}!`;
-      await Share.share({
-        message: `${message}\n${imgUri}`,
-      });
-    } catch (error) {
-      console.error("Error sharing:", error);
     }
   };
 
@@ -249,7 +245,12 @@ export default function PostsPage() {
                         borderColor: "#9CA3AF",
                       }}
                     />
-                    <Text style={styles.username}>@{item.postedby}</Text>
+                    <TouchableOpacity
+                      onPress={() => console.log(`Clicked on @${item.postedby}`)} // makes the username clickable
+                    >
+                      <Text style={styles.username}>@{item.postedby}</Text>
+                    </TouchableOpacity>
+
                   </View>
 
                   <TouchableOpacity
@@ -299,12 +300,17 @@ export default function PostsPage() {
                     <Feather name="message-circle" size={24} color="#E5E7EB" />
                   </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => handleShare(item)}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShareTargetPost(item);
+                      setShareModalVisible(true);
+                    }}
+                  >
                     <Feather name="send" size={22} color="#E5E7EB" />
                   </TouchableOpacity>
                 </View>
 
-                {/* Likes and Caption */}
+                {/* Likes + Caption */}
                 <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
                   <Text
                     style={{
@@ -353,6 +359,89 @@ export default function PostsPage() {
           }
         />
       )}
+
+      {/* Share feature */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={shareModalVisible}
+        onRequestClose={() => setShareModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#1F2937",
+              borderRadius: 12,
+              padding: 20,
+              width: "80%",
+              maxHeight: "60%",
+            }}
+          >
+            <Text
+              style={{
+                color: "#E5E7EB",
+                fontSize: 18,
+                fontWeight: "bold",
+                marginBottom: 12,
+                textAlign: "center",
+              }}
+            >
+              Share Post
+            </Text>
+
+            <Text
+              style={{
+                color: "#9CA3AF",
+                marginBottom: 12,
+                textAlign: "center",
+              }}
+            >
+              Select someone to share with:
+            </Text>
+
+            {/* Example static list (replace with backend data later) */}
+            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+              <TouchableOpacity
+                key={user}
+                style={{
+                  paddingVertical: 10,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: "#374151",
+                }}
+                onPress={() => {
+                  console.log(
+                    `Shared post ${shareTargetPost?.postid} with ${user}`
+                  );
+                  setShareModalVisible(false);
+                }}
+              >
+                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => setShareModalVisible(false)}
+              style={{
+                marginTop: 20,
+                alignSelf: "center",
+                backgroundColor: "#374151",
+                paddingHorizontal: 24,
+                paddingVertical: 10,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
