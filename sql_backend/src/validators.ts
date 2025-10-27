@@ -7,6 +7,7 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6)
 });
+
 export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(8).optional()
@@ -23,6 +24,7 @@ export const createPostSchema = z.object({
   datapath: z.string().nullable(),
   location: z.string().nullable().optional(),
   visibility: z.number().int().nullable().optional(),
+  thumbpath: z.string().optional(),
 });
 
 export const updatePostSchema = z.object({

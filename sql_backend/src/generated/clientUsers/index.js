@@ -91,13 +91,16 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostsScalarFieldEnum = {
-  postid: 'postid',
-  postedby: 'postedby',
-  posttype: 'posttype',
-  datapath: 'datapath',
-  location: 'location',
-  visibility: 'visibility'
+exports.Prisma.UsersScalarFieldEnum = {
+  username: 'username',
+  email: 'email',
+  passwordHash: 'passwordHash'
+};
+
+exports.Prisma.FollowersScalarFieldEnum = {
+  follower: 'follower',
+  followee: 'followee',
+  followed_at: 'followed_at'
 };
 
 exports.Prisma.SortOrder = {
@@ -105,14 +108,10 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
-exports.Prisma.NullsOrder = {
-  first: 'first',
-  last: 'last'
-};
-
 
 exports.Prisma.ModelName = {
-  posts: 'posts'
+  users: 'users',
+  followers: 'followers'
 };
 /**
  * Create the Client
@@ -125,7 +124,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\Cmull\\StudioProjects\\Hotspots\\sql_backend\\src\\generated\\clientA",
+      "value": "C:\\Users\\Cmull\\StudioProjects\\Hotspots\\sql_backend\\src\\generated\\clientB",
       "fromEnvVar": null
     },
     "config": {
@@ -139,7 +138,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\Cmull\\StudioProjects\\Hotspots\\sql_backend\\prisma\\schemaPosts.prisma",
+    "sourceFilePath": "C:\\Users\\Cmull\\StudioProjects\\Hotspots\\sql_backend\\prisma\\schemaUsers.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -157,13 +156,13 @@ const config = {
   "inlineDatasources": {
     "db": {
       "url": {
-        "fromEnvVar": "DATABASE_URL_POSTS",
+        "fromEnvVar": "DATABASE_URL_USERS",
         "value": null
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/clientA\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL_POSTS\")\n}\n\n/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments\nmodel posts {\n  postid     Int     @id @default(autoincrement())\n  postedby   String  @db.VarChar(25)\n  posttype   Int\n  datapath   String  @db.VarChar(255)\n  location   String? @db.VarChar(50)\n  visibility Int?    @default(2)\n\n  @@index([postedby], map: \"posts_users_username_fk\")\n}\n",
-  "inlineSchemaHash": "1de73d2e070f8a170d3a1697b2a457b0a76dc5f2ddb9f1888751246972897eb3",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/clientB\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL_USERS\")\n}\n\nmodel users {\n  username     String @id\n  email        String @unique\n  passwordHash String\n}\n\nmodel followers {\n  follower    String\n  followee    String\n  followed_at DateTime @default(now()) // <-- was String; use DateTime\n\n  @@id([follower, followee]) // <-- composite PK to match your SQL\n  @@map(\"followers\") // maps to your existing table name\n}\n",
+  "inlineSchemaHash": "57ffb71a49e928e2bca0261c9ec87e9233cbc6c2416cceed4a2be56c8ab59238",
   "copyEngine": true
 }
 
@@ -172,8 +171,8 @@ const fs = require('fs')
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   const alternativePaths = [
-    "src/generated/clientA",
-    "generated/clientA",
+    "src/generated/clientB",
+    "generated/clientB",
   ]
   
   const alternativePath = alternativePaths.find((altPath) => {
@@ -184,7 +183,7 @@ if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   config.isBundled = true
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"posts\":{\"dbName\":null,\"fields\":[{\"name\":\"postid\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":true,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"Int\",\"default\":{\"name\":\"autoincrement\",\"args\":[]},\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"postedby\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"posttype\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"Int\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"datapath\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"location\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":false,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"visibility\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":false,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"Int\",\"default\":2,\"isGenerated\":false,\"isUpdatedAt\":false}],\"primaryKey\":null,\"uniqueFields\":[],\"uniqueIndexes\":[],\"isGenerated\":false,\"documentation\":\"This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"users\":{\"dbName\":null,\"fields\":[{\"name\":\"username\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":true,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"email\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":true,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"passwordHash\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false}],\"primaryKey\":null,\"uniqueFields\":[],\"uniqueIndexes\":[],\"isGenerated\":false},\"followers\":{\"dbName\":\"followers\",\"fields\":[{\"name\":\"follower\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"followee\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":false,\"type\":\"String\",\"isGenerated\":false,\"isUpdatedAt\":false},{\"name\":\"followed_at\",\"kind\":\"scalar\",\"isList\":false,\"isRequired\":true,\"isUnique\":false,\"isId\":false,\"isReadOnly\":false,\"hasDefaultValue\":true,\"type\":\"DateTime\",\"default\":{\"name\":\"now\",\"args\":[]},\"isGenerated\":false,\"isUpdatedAt\":false}],\"primaryKey\":{\"name\":null,\"fields\":[\"follower\",\"followee\"]},\"uniqueFields\":[],\"uniqueIndexes\":[],\"isGenerated\":false}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = undefined
 
@@ -202,7 +201,7 @@ Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "query_engine-windows.dll.node");
-path.join(process.cwd(), "src/generated/clientA/query_engine-windows.dll.node")
+path.join(process.cwd(), "src/generated/clientB/query_engine-windows.dll.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "src/generated/clientA/schema.prisma")
+path.join(process.cwd(), "src/generated/clientB/schema.prisma")

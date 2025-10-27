@@ -6,6 +6,7 @@ export async function listUsers() {
   if (!r.ok) throw new Error(`Users failed: ${r.status}`); 
   return r.json();
 }
+
 export async function getUser(username: string) {
   const r = await fetch(`${BASE}/api/users/${encodeURIComponent(username)}`, { credentials: "include" });
   if (!r.ok) throw new Error(`User not found: ${r.status}`);
@@ -32,7 +33,7 @@ export async function getPost(postid: number) {
   return r.json();
 }
 export async function createPost(input: {
-  postedby: string; posttype: number; datapath: string; location?: string | null; visibility?: number | null;
+  postedby: string; posttype: number; datapath: string; location: string; visibility?: number | null;
 }) {
   const r = await fetch(`${BASE}/api/posts`, {
     method: "POST",
