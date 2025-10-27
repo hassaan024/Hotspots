@@ -1,10 +1,16 @@
 // Fixed PostsPage: Better UI + Correct Upload Handling (images & videos)
 import React, { useEffect, useState, useCallback } from "react";
-import { addComment, listComments } from "../components/api";
-
 import {
-  View, Text, Image, FlatList, RefreshControl, ActivityIndicator,
-  Dimensions, TouchableOpacity, ScrollView, Modal, TextInput
+  View,
+  Text,
+  Image,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
 } from "react-native";
 import { styles } from "../styles";
 import {
@@ -25,6 +31,18 @@ let VideoComp = null;
 try {
   VideoComp = require("expo-av").Video;
 } catch {}
+
+function injectNoControlsCSS() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("no-media-controls")) return;
+  const style = document.createElement("style");
+  style.id = "no-media-controls";
+  style.textContent = `
+    video::-webkit-media-controls-enclosure { display: none !important; }
+    video::-webkit-media-controls { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
 
 /** Normalize server paths to absolute URIs */
 function toImageUri(datapath) {
@@ -57,10 +75,18 @@ const Media = ({ uri, poster, isVideo, size }) => {
     return (
       <video
         src={uri}
-        controls
         poster={poster || undefined}
+        playsInline
+        autoPlay
+        muted
+        loop
+        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
         style={{ width: size, height: size, display: "block", objectFit: "contain" }}
-      />
+      >
+        Your browser does not support the video tag.
+      </video>
     );
   }
 
@@ -68,9 +94,12 @@ const Media = ({ uri, poster, isVideo, size }) => {
     <VideoComp
       source={{ uri }}
       style={{ width: size, height: size }}
-      useNativeControls
       resizeMode="contain"
       posterSource={poster ? { uri: poster } : undefined}
+      useNativeControls={false}
+      shouldPlay
+      isLooping
+      isMuted
     />
   ) : null;
 };
@@ -85,9 +114,6 @@ export default function PostsPage() {
   const [viewingPost, setViewingPost] = useState(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [shareTargetPost, setShareTargetPost] = useState(null);
-  const [commentText, setCommentText] = useState("");
-  const [comments, setComments] = useState([]);
-  const [nextCursor, setNextCursor] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -106,27 +132,10 @@ export default function PostsPage() {
   }, []);
 
   useEffect(() => {
+    injectNoControlsCSS();
     load();
   }, [load]);
-const handleComment = async (postid) => {
-  try {
-    setLoading(true);
-    const data = await getPostWithComments(postid);
-    setViewingPost(data);
-    setComments(data.comments || []);   // ✅ seed
-    setNextCursor(null);                // ✅ reset pagination
-  } catch (error) {
-    console.error("Error loading comments:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-useEffect(() => {
-  if (viewingPost) {
-    setComments(viewingPost.comments || []);
-    setNextCursor(null);
-  }
-}, [viewingPost]);
+
   const toggleLike = async (postid) => {
     setLikedPosts((prev) => {
       const already = !!prev[postid];
@@ -139,51 +148,22 @@ useEffect(() => {
     const likedNow = !likedPosts[postid];
     await updateLikeStatus(postid, likedNow).catch(() => {});
   };
-async function submitComment() {
-  const text = commentText.trim();
-  if (!text || !viewingPost) return;
-
-  // optimistic
-  const optimistic = {
-    commentid: `tmp-${Date.now()}`,
-    username: "you",
-    text,
-    created_at: new Date().toISOString(),
-  };
-  setComments((c) => [optimistic, ...c]);
-  setCommentText("");
-
-  try {
-    const created = await addComment(viewingPost.postid, { body: text });
-    setComments((c) =>
-      [created, ...c.filter((x) => x.commentid !== optimistic.commentid)]
-    );
-  } catch (e) {
-    console.error(e);
-    // revert optimistic if failed
-    setComments((c) => c.filter((x) => x.commentid !== optimistic.commentid));
-    setCommentText(text);
-  }
-}
-
-async function loadMoreComments() {
-  if (!viewingPost || !comments.length) return;
-
-  const last = comments[comments.length - 1];
-  const res = await listComments(viewingPost.postid, {
-    parentid: null,
-    after_ts: nextCursor?.after_ts || last.created_at,
-    after_id: nextCursor?.after_id || last.commentid,
-    limit: 20,
-  });
-  setComments((c) => [...c, ...(res.items || [])]);
-  setNextCursor(res.next_cursor || null);
-}
 
   const handleFollowToggle = (username) => {
     setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));
   };
 
+  const handleComment = async (postid) => {
+    try {
+      setLoading(true);
+      const data = await getPostWithComments(postid);
+      setViewingPost(data);
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const goBackToFeed = () => setViewingPost(null);
 
@@ -214,55 +194,26 @@ async function loadMoreComments() {
           <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
         </View>
 
-<View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
-  <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>
-    Comments
-  </Text>
+        <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
+          <Text style={{ color: "#E5E7EB" }}>
+            <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
+            {viewingPost.description}
+          </Text>
+        </View>
 
-  {/* input row */}
-  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-    <TextInput
-      value={commentText}
-      onChangeText={setCommentText}
-      placeholder="Add a comment..."
-      placeholderTextColor="#9CA3AF"
-      style={{
-        flex: 1,
-        color: "#E5E7EB",
-        backgroundColor: "#1F2937",
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-      }}
-      onSubmitEditing={submitComment}
-      returnKeyType="send"
-    />
-    <TouchableOpacity onPress={submitComment}
-      style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#374151", borderRadius: 8 }}>
-      <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>Post</Text>
-    </TouchableOpacity>
-  </View>
-
-  {/* list */}
-  {comments?.length ? (
-    comments.map((c) => (
-      <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
-        <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
-        {c.text}
-      </Text>
-    ))
-  ) : (
-    <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
-  )}
-
-  {/* pagination */}
-  {nextCursor && (
-    <TouchableOpacity onPress={loadMoreComments} style={{ marginTop: 12 }}>
-      <Text style={{ color: "#60A5FA" }}>Load more</Text>
-    </TouchableOpacity>
-  )}
-</View>
-
+        <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
+          <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
+          {viewingPost.comments?.length ? (
+            viewingPost.comments.map((c) => (
+              <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
+                <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
+                {c.text}
+              </Text>
+            ))
+          ) : (
+            <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
+          )}
+        </View>
       </ScrollView>
     );
   }

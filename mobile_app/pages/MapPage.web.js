@@ -9,9 +9,9 @@ const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 const DENSITY_THRESHOLD = 3;
 const CLUSTER_RADIUS_M = 100; // show heatmap when >= this many posts are visible
-const ZOOM_THRESHOLD = 1;
+const ZOOM_THRESHOLD = 9;
 
-const CROWD_HIDE_MAX_ZOOM = 10;
+const CROWD_HIDE_MAX_ZOOM = 14;
 
 
 const Uluru = { lat: -25.344, lng: 131.031 };
@@ -75,6 +75,18 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
   });
 } */
 
+function injectNoControlsCSS() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("no-media-controls")) return;
+  const style = document.createElement("style");
+  style.id = "no-media-controls";
+  style.textContent = `
+    video::-webkit-media-controls-enclosure { display: none !important; }
+    video::-webkit-media-controls { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -86,6 +98,7 @@ export default function MapPage() {
 
   useEffect(() => {
     let cancelled = false;
+    injectNoControlsCSS();
 
     (async () => {
       try {
@@ -375,12 +388,13 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                       key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
                       src={toImageUri(selectedPost.datapath)}
                       poster={toImageUri(selectedPost.thumbpath)}
-                      controls
                       playsInline
                       autoPlay
                       muted
                       loop
-                      preload="metadata"
+                      controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
                       style={{
                         width: "100%",
                         height: "auto",
@@ -406,7 +420,7 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                   )}
                 </View>
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
-                  Posted by: {selectedPost.postedby || "Unknown"}
+                   {selectedPost.postedby || "Unknown"}
                 </Text>
                 <Text style={[styles.text, { marginBottom: 8 }]}>
                   {String(selectedPost?.caption || "").trim() || "(no caption)"}
