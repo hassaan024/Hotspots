@@ -40,7 +40,7 @@ router.get("/locations", async (_req, res, next) => {
       const lat = Number(a), lng = Number(b);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-      return { id: r.postid, postedby: r.postedby, lat, lng, datapath: r.datapath ?? null };
+      return { id: r.postid, postedby: r.postedby, lat, lng, datapath: r.datapath ?? null , thumbpath: r.thumbpath ?? null};
     }).filter(Boolean);
 
     res.json(points);

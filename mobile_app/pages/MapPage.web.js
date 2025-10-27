@@ -11,15 +11,36 @@ const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 
 // Build a usable image URL from a post's datapath (mirrors PostsPage logic)
+
+
+const Uluru = { lat: -25.344, lng: 131.031 };
+const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
+
+const isImagePath = (s = "") => /\.(jpe?g|png|webp|gif)$/i.test(s);
+const isVideoPath = (s = "") => /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(s);
+
+// same URL builder you use elsewhere
 function toImageUri(datapath) {
   if (!datapath) return null;
   if (/^https?:\/\//i.test(datapath)) return datapath;
   if (datapath.startsWith("/")) return `${API_BASE}${datapath}`;
-  const clean = datapath.replace(/^\.?\//, "");
+  const clean = String(datapath).replace(/^\.?\//, "");
   return `${API_BASE}/uploads/${clean}`;
 }
 
-const Uluru = { lat: -25.344, lng: 131.031 };
+// pick the preview asset like PostsPage logic:
+// - if it's a video => use thumbpath (fallback to null so we don't try to <img> a .mp4)
+// - if it's an image => use datapath
+function pickPreviewAsset(p) {
+  const posttype = Number(p?.posttype);
+  const dp = String(p?.datapath || "");
+  const tp = String(p?.thumbpath || "");
+
+  if (posttype === 1 || /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(dp)) {
+    return tp || null; // video => use thumbnail or nothing (fallback to placeholder)
+  }
+  return dp || null;   // image => use image path
+}
 
 /* function loadGoogle() {
   // Resolve as soon as the Maps namespace exists (older loaders may not have importLibrary)
@@ -209,23 +230,34 @@ export default function MapPage() {
           '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="100%" height="100%" rx="20" ry="20" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
         )}`;
 
-        const markers = points.map((p) => {
-          const img = document.createElement("img");
-          img.src = toImageUri(p.thumbpath || p.datapath) || placeholder;
-          img.alt = p.postedby ? `@${p.postedby}` : "post";
-          img.style.width = "40px";
-          img.style.height = "40px";
-          img.style.objectFit = "cover";
-          img.style.borderRadius = "50%";
-          img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
+ const markers = points.map((p) => {
+   const img = document.createElement("img");
+   const preview = pickPreviewAsset(p); // thumb for video; datapath for image
+   const url = toImageUri(preview);
+ if (!url) {
+   console.warn("No preview URL for point", p);
+ } else {
+   // Optional: test the URL in a new tab to confirm it loads
+   // console.log("Marker img URL:", url);
+ }
+   img.src = url || placeholder;
+   img.alt = p.postedby ? `@${p.postedby}` : "post";
+   img.style.width = "40px";
+   img.style.height = "40px";
+   img.style.objectFit = "cover";
+   img.style.borderRadius = "50%";
+   img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
+   img.loading = "lazy";
+   // if the image fails (e.g., no thumb yet / wrong filename), show placeholder
+   img.onerror = () => { img.src = placeholder; };
 
-          return new google.maps.marker.AdvancedMarkerElement({
-            map,
-            position: { lat: p.lat, lng: p.lng },
-            content: img,
-            title: `@${p.postedby}`,
-          });
-        });
+   return new google.maps.marker.AdvancedMarkerElement({
+     map,
+     position: { lat: p.lat, lng: p.lng },
+     content: img,
+     title: `@${p.postedby}`,
+   });
+ });
 
         new MarkerClusterer({ markers, map });
       } catch (e) {

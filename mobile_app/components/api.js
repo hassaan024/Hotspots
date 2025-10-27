@@ -83,9 +83,9 @@ export async function listUserPosts(username) {
 
 // Maps
 export async function listLocations() {
-  const r = await fetch(`${API_BASE}/api/posts/locations`);
-  if (!r.ok) throw new Error(`Locations failed: ${r.status}`);
-  return r.json(); // [{ id, postedby, lat, lng, datapath }]
+  const r = await fetch(`${API_BASE}/api/posts/locations`, { credentials: "include" });
+  if (!r.ok) throw new Error(`locations failed: ${r.status}`);
+  return r.json(); // [{ id, postedby, lat, lng, datapath, thumbpath, posttype }]
 }
 
 // add these exports
