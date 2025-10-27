@@ -9,9 +9,9 @@ const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 const DENSITY_THRESHOLD = 3;
 const CLUSTER_RADIUS_M = 100; // show heatmap when >= this many posts are visible
-const ZOOM_THRESHOLD = 1;
+const ZOOM_THRESHOLD = 9;
 
-const CROWD_HIDE_MAX_ZOOM = 10;
+const CROWD_HIDE_MAX_ZOOM = 14;
 
 
 const Uluru = { lat: -25.344, lng: 131.031 };
@@ -406,7 +406,7 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                   )}
                 </View>
                 <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
-                  Posted by: {selectedPost.postedby || "Unknown"}
+                   {selectedPost.postedby || "Unknown"}
                 </Text>
                 <Text style={[styles.text, { marginBottom: 8 }]}>
                   {String(selectedPost?.caption || "").trim() || "(no caption)"}
