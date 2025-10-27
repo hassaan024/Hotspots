@@ -24,6 +24,7 @@ export const createPostSchema = z.object({
   datapath: z.string().nullable(),
   location: z.string().nullable().optional(),
   visibility: z.number().int().nullable().optional(),
+  thumbpath: z.string().optional(),
 });
 
 export const updatePostSchema = z.object({

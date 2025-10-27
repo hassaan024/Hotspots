@@ -16,30 +16,25 @@ export default function ProfilePage() {
     [authUser]
   );
 
-  const [imgs, setImgs] = useState([]);       // array of image URIs for the grid
-  const [loading, setLoading] = useState(true);
+    const [posts, setPosts] = useState([]);
+      const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
 
-  const toImageUri = (p) => {
-    const datapath = p?.datapath || p?.dataPath || p?.path;
-    if (!datapath) return null;
-    const base = (API_BASE || "").replace(/\/$/, "");
-
-    const rel = String(datapath).replace(/^\//, "");
-    //console.log(`${base}/uploads/${rel}`);
-    return `${base}/uploads/${rel}`;
-  };
+const toImageUri = (p) => {
+  const path =
+    Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath;
+  if (!path) return null;
+  const base = (API_BASE || "").replace(/\/$/, "");
+  const rel = String(path).replace(/^\//, "");
+  return `${base}/uploads/${rel}`;
+};
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      const posts = await listUserPosts(user.username);
-      // Filter to posts that actually have an image URL
-      const uris = (posts || [])
-        .map(toImageUri)
-        .filter((u) => typeof u === "string" && u.length > 0);
-      setImgs(uris);
+           const arr = await listUserPosts(user.username);
+           setPosts(arr || []);
     } catch (e) {
       console.error(e);
       Alert.alert("Couldn’t load posts", e?.message ?? "Unknown error");
@@ -80,7 +75,7 @@ export default function ProfilePage() {
           <Image source={{ uri: user.avatar }} style={styles.avatar} />
           <View style={styles.headerStats}>
             <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{imgs.length}</Text>
+              <Text style={styles.statNumber}>{posts.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.statBlock}>
@@ -110,15 +105,16 @@ export default function ProfilePage() {
             <ActivityIndicator />
           </View>
         ) : (
-          <FlatList
-            data={imgs}
-            keyExtractor={(uri, idx) => `${uri}-${idx}`}
+
+     <FlatList
+       data={posts}
+       keyExtractor={(p, idx) => String(p.postid ?? idx)}
             numColumns={3}
             contentContainerStyle={styles.gridContainer}
             renderItem={({ item }) => (
               <View style={styles.gridItem}>
                 {/* Make sure gridImage has width: "100%" and aspectRatio: 1 in styles */}
-                <Image source={{ uri: item }} style={styles.gridImage} />
+               <Image source={{ uri: toImageUri(item) }} style={styles.gridImage} />
               </View>
             )}
             showsVerticalScrollIndicator={false}

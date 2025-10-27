@@ -12,12 +12,32 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { styles, colors } from "../stylesCreatePostPage";
+    import { styles, colors } from "../stylesCreatePostPage";
 import { uploadImage, createPost } from "../components/api";
 import { useContext } from "react";
 import { AuthContext } from "../AuthContext";
 
+const makeWebVideoThumb = async (videoUri, timeMs = 1000) => {
+  const video = document.createElement("video");
+  video.src = videoUri;
+  video.crossOrigin = "anonymous";
+  await new Promise((res, rej) => {
+    video.onloadeddata = res;
+    video.onerror = () => rej(new Error("Video load error"));
+  });
+  video.currentTime = Math.min(timeMs / 1000, Math.max((video.duration || 2) - 0.1, 0.1));
+  await new Promise((res) => { video.onseeked = res; });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth || 512;
+  canvas.height = video.videoHeight || 512;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", 0.85));
+};
 export default function CreatePostPage() {
+    const [selectedMeta, setSelectedMeta] = useState({ fileName: null, mimeType: null });
+
   const [selectedUri, setSelectedUri] = useState(null);
   const [caption, setCaption] = useState("");
   const [postedBanner, setPostedBanner] = useState(false);
@@ -34,6 +54,7 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
     // request permission on native (web typically not needed)
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
       if (status !== "granted") {
         setLocStatus("error");
         setLocError("Photo library permission denied");
@@ -41,16 +62,18 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
       }
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       aspect: [1, 1], // square crop to match grid vibe
       quality: 0.9,
+
     });
 
     if (!result.canceled && result.assets?.length) {
-      const uri = result.assets[0].uri; // file:// on native, blob/object URL on web
-      setSelectedUri(uri);
+    const a = result.assets[0];
+      setSelectedUri(a.uri);
+      setSelectedMeta({ fileName: a.fileName ?? null, mimeType: a.mimeType ?? null });
       // reset and detect location right after choosing an image
       setLocationText("");
       setLocStatus("idle");
@@ -67,6 +90,7 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
 
     try {
       if (Platform.OS === "web" && navigator?.geolocation) {
+
         await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
@@ -153,38 +177,51 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
 
 async function onPost() {
   try {
-    if (!selectedUri) throw new Error("Pick an image first");
+    if (!selectedUri) throw new Error("Pick an image or video first");
 
-    // 1) upload image -> returns filename like "abc123.jpg"
-    const filename = await uploadImage(selectedUri);
-
-    // 2) build payload EXACTLY as server expects
+    // upload; pass picker metadata when available
+    const { filename, mimetype } = await  uploadImage(selectedUri, selectedMeta);
+    const isVideo = (mimetype || "").startsWith("video/") ||
+                    /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(filename);
+      // If video: generate & upload a JPG thumbnail
+      let thumbname;
+      if (isVideo) {
+        if (typeof window !== "undefined") {
+          // WEB: make a blob thumbnail and upload
+          const blob = await makeWebVideoThumb(selectedUri, 1000);
+          if (!blob) throw new Error("Could not create video thumbnail");
+          const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: "image/jpeg" });
+          const objUrl = URL.createObjectURL(file);
+          const t = await uploadImage(objUrl, { fileName: file.name, mimeType: file.type });
+          URL.revokeObjectURL(objUrl);
+          thumbname = t.filename;
+        } else {
+          // NATIVE: use expo-video-thumbnails (lazy require to avoid web bundling)
+          const VideoThumbnails = require("expo-video-thumbnails");
+          const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(selectedUri, { time: 1000 });
+          const t = await uploadImage(thumbUri, { fileName: `thumb-${Date.now()}.jpg`, mimeType: "image/jpeg" });
+          thumbname = t.filename;
+        }
+      }
     const payload = {
-      postedby: authUser?.username ?? "",   // string
-      posttype: 0,                          // number (adjust to your enum)
-      datapath: filename,
-      location: locationText                   // string (no "/uploads/", just the filename)
-      // If you include location, make sure types match your server schema:
-      // lat: typeof lat === "number" ? lat : undefined,
-      // lng: typeof lng === "number" ? lng : undefined,
+      postedby: authUser?.username ?? "",
+      posttype: isVideo ? 1 : 0,            // 0=image, 1=video
+      datapath: filename,                   // plain filename from server
+      location: (locationText || "").replace(/\s   /g, ""), // "lat,lng" no spaces
+      thumbpath: thumbname,
     };
-    console.log("payload →", payload);
-    // guard against undefined required fields
+
+    // sanity guards
     if (!payload.postedby) throw new Error("No username in AuthContext");
-    if (typeof payload.posttype !== "number") throw new Error("posttype must be a number");
     if (!payload.datapath) throw new Error("datapath (filename) missing");
 
-    // 3) create the post
     await createPost(payload);
-
-    // 4) navigate/clear UI as needed
-    // ...
+    // success UI...
   } catch (e) {
     console.error(e);
     Alert.alert("Post failed", String(e?.message ?? e));
   }
 }
-
   return (
     <KeyboardAvoidingView
       style={styles.screen}
