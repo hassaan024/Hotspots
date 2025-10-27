@@ -106,32 +106,75 @@ export async function getFollowCounts(username) {
   ]);
   return { followers: followers.length, following: following.length };
 }
-export async function uploadImage(imageUri) {
-  const base = (API_BASE || "").replace(/\/+$/, "");
-  const name = imageUri.split("/").pop() || `image-${Date.now()}.jpg`;
-  const type = name.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+// usage: const filename = await uploadMedia(uri, { fileName: asset.fileName, mimeType: asset.mimeType });
 
-  const isBrowser =
-    typeof window !== "undefined" &&
-    typeof document !== "undefined" &&
-    typeof File !== "undefined";
+export async function uploadImage(mediaUri, meta = {}) {
+  const base = (API_BASE || "").replace(/\/+$/, "");
+
+  const isWeb = typeof window !== "undefined" && typeof document !== "undefined" && typeof File !== "undefined";
+
+  // simple map to fix extensions when needed
+  const extByMime = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/ogg": "ogv",
+    "video/quicktime": "mov",
+    "video/3gpp": "3gp",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+  };
+
+  const inferExtFromMime = (mime) => {
+    if (!mime) return "";
+    const ext = extByMime[mime] || mime.split("/")[1] || "";
+    return ext ? `.${ext}` : "";
+  };
+
+  const inferMimeFromName = (name = "") => {
+    const n = name.toLowerCase();
+    if (n.endsWith(".png")) return "image/png";
+    if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+    if (n.endsWith(".webp")) return "image/webp";
+    if (n.endsWith(".gif")) return "image/gif";
+    if (n.endsWith(".mp4")) return "video/mp4";
+    if (n.endsWith(".mov")) return "video/quicktime";
+    if (n.endsWith(".webm")) return "video/webm";
+    if (n.endsWith(".ogv")) return "video/ogg";
+    if (n.endsWith(".3gp")) return "video/3gpp";
+    return "";
+  };
 
   async function attempt(fieldName) {
     const form = new FormData();
 
-    if (isBrowser) {
-      const resp = await fetch(imageUri);
+    if (isWeb) {
+      // WEB: turn blob/object URL into a File and preserve blob.type
+      const resp = await fetch(mediaUri);
       const blob = await resp.blob();
-      const file = new File([blob], name, { type: blob.type || type });
+      const ext = inferExtFromMime(blob.type) || ".bin";
+      const safeName = (meta.fileName && /\.[a-z0-9]+$/i.test(meta.fileName)) ? meta.fileName : `upload-${Date.now()}${ext}`;
+      const file = new File([blob], safeName, { type: blob.type || "application/octet-stream" });
       form.append(fieldName, file);
     } else {
-      form.append(fieldName, { uri: imageUri, name, type });
+      // NATIVE (Expo / RN): prefer picker-provided metadata
+      const guessedNameFromUri = (mediaUri.split("/").pop() || "").trim();
+      const pickedName = meta.fileName || guessedNameFromUri || `upload-${Date.now()}`;
+      const pickedMime = meta.mimeType || inferMimeFromName(pickedName) || "application/octet-stream";
+
+      // ensure the name has the proper extension for the MIME (helps server/clients)
+      const hasExt = /\.[a-z0-9]+$/i.test(pickedName);
+      const finalExt = hasExt ? "" : inferExtFromMime(pickedMime);
+      const finalName = hasExt ? pickedName : `${pickedName}${finalExt || ""}`;
+
+      form.append(fieldName, { uri: mediaUri, name: finalName, type: pickedMime });
     }
 
     const res = await fetch(`${base}/api/posts/upload`, {
       method: "POST",
       credentials: "include",
-      body: form, // DO NOT set Content-Type yourself
+      body: form, // don't set Content-Type
     });
 
     if (!res.ok) {
@@ -142,18 +185,27 @@ export async function uploadImage(imageUri) {
     }
 
     const data = await res.json().catch(() => ({}));
+    // OPTIONAL: if you update server, return mimetype too: { filename, mimetype }
     let filename = data.filename || data.path || data.file;
     if (!filename) throw new Error("Server did not return a filename/path");
-    return filename.replace(/^\/?uploads\/+/i, "");
+
+    // normalize to plain filename (no leading /uploads/)
+    filename = filename.replace(/^\/?uploads\/+/i, "");
+
+    // bubble up mimetype if server sends it; else infer from filename
+    const mimetype = data.mimetype || inferMimeFromName(filename) || meta.mimeType || "";
+
+    return { filename, mimetype };
   }
 
   try {
     return await attempt("file");
   } catch (e) {
     if (e?.status === 400 || e?.status === 415) {
-      return await attempt("image");
+      return await attempt("image"); // some servers use upload.single("image")
     }
     throw e;
   }
 }
+
 

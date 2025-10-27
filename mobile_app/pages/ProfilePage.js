@@ -110,7 +110,9 @@ export default function ProfilePage() {
             <ActivityIndicator />
           </View>
         ) : (
+
           <FlatList
+
             data={imgs}
             keyExtractor={(uri, idx) => `${uri}-${idx}`}
             numColumns={3}

@@ -8,7 +8,12 @@ import fs from "fs";
 
 
 const router = Router();
-
+const ACCEPT = new Set([
+  // images
+  "image/jpeg","image/png","image/webp","image/gif",
+  // videos
+  "video/mp4","video/quicktime","video/webm","video/ogg","video/3gpp"
+]);
 router.get("/", async (req, res, next) => {
   try {
     const { postedby } = req.query as { postedby?: string };
@@ -100,17 +105,20 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) =>
-    cb(null, `${crypto.randomUUID()}_${Date.now()}${path.extname(file.originalname || ".jpg")}`)
+    cb(null, `${crypto.randomUUID()}_${Date.now()}${path.extname(file.originalname || "")}`)
 });
-const upload = multer({ storage });
-
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB example
+  fileFilter: (_req, file, cb) => {
+    if (ACCEPT.has(file.mimetype)) return cb(null, true);
+    cb(new Error(`Unsupported file type: ${file.mimetype}`));
+  },
+});
 // THIS PATH MUST BE '/upload' because we will mount the router at '/api/posts'
 router.post("/upload", upload.single("file"), (req, res) => {
-
   if (!req.file) return res.status(400).json({ error: "No file" });
-  const location = req.body;
-  res.json({ filename: req.file.filename }); // client expects { filename }
-
+  res.json({ filename: req.file.filename }); // same shape as images
 });
 
-export default router;
+export router;
