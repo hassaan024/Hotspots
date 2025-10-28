@@ -1,17 +1,32 @@
+// stylesCreatePostPage.js
 import { StyleSheet, Platform } from "react-native";
 
-export const colors = {
-  bg: "#0B0F14",          // app background
-  panel: "#121821",       // cards/panels
-  panelBorder: "#1F2937", // subtle border
-  text: "#E5E7EB",        // primary text
-  textDim: "#9CA3AF",     // secondary text
-  brand: "#60A5FA",       // blue
-  accent: "#FBBF24",      // amber (active/confirm)
-  btnBg: "#1F2937",       // inactive button
+/** Instagram neon gradient palette */
+export const ig = {
+  bg: "#0B0A0E",
+  panel: "#121018",
+  panelBorder: "#2A1E33",
+  text: "#F5F6F8",
+  textDim: "#B6BAC4",
+  accent: "#FFC300",     // warm gold
+  danger: "#f87171",
+
+  gradient: ["#FFD600", "#FF7A00", "#FF0069", "#D300C5", "#7638FA"],
+  gradientFaint: ["#FFD60020", "#FF7A0020", "#FF006920", "#D300C520", "#7638FA20"],
 };
 
 const radius = 14;
+
+export const colors = {
+  bg: ig.bg,
+  panel: ig.panel,
+  panelBorder: ig.panelBorder,
+  text: ig.text,
+  textDim: ig.textDim,
+  brand: "#8a49a1",
+  accent: ig.accent,
+  btnBg: "#1A1722",
+};
 
 export const styles = StyleSheet.create({
   screen: {
@@ -25,7 +40,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "stretch",
-    backgroundColor: "#1a1300",
+    backgroundColor: "rgba(255,195,0,0.06)",
     borderColor: colors.accent,
     borderWidth: 1,
     paddingVertical: 10,
@@ -35,7 +50,7 @@ export const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: colors.accent,
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.18,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
       },
@@ -49,17 +64,40 @@ export const styles = StyleSheet.create({
   },
 
   /* Title */
+  /** ===== Title Bubble (Neon Gradient Style) ===== */
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    paddingHorizontal: 2,
+    justifyContent: "center",
+    marginBottom: 18,
+    marginTop: 6,
   },
+  titleBubble: {
+    borderRadius: 40,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+
+    // Instagram-style gradient glow
+    backgroundColor: "#FF7A00",
+    backgroundImage:
+      "linear-gradient(90deg, #FFD600, #FF7A00, #FF0069, #D300C5, #7638FA)",
+    // shadowColor: "#FF7A00",
+    // shadowOpacity: 0.5,
+    // shadowRadius: 10,
+    // shadowOffset: { width: 0, height: 3 },
+    // borderWidth: 1,
+    // borderColor: "rgba(255,255,255,0.2)",
+  },
+
   title: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "700",
-    marginLeft: 8,
+    color: "#fff",
+    fontSize: 17, // subtle and clean
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowRadius: 6,
   },
 
   /* Composer Card */
@@ -70,7 +108,6 @@ export const styles = StyleSheet.create({
     borderRadius: radius,
     padding: 14,
     flex: 1,
-
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -82,14 +119,37 @@ export const styles = StyleSheet.create({
     }),
   },
 
-  previewWrap: {
+  /* ===== Gradient Outline Utilities ===== */
+  // Use with <LinearGradient colors={ig.gradient} style={styles.ring}>
+  ring: {
+    padding: 2, // ring thickness
+    borderRadius: 12,
+  },
+  ringFaint: {
+    padding: 2,
+    borderRadius: 12,
+  },
+  ringInner: {
+    borderRadius: 10,
+    backgroundColor: "#0f141b", // dark inner surface
+    borderWidth: 1,
+    borderColor: colors.panelBorder,
+    overflow: "hidden",
+  },
+
+  /* Preview with gradient outline */
+  previewRing: {
+    padding: 2,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  previewInner: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.panelBorder,
     overflow: "hidden",
     backgroundColor: "#0f141b",
     height: 240,
-    marginBottom: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -111,31 +171,44 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  actionBtn: {
+
+  // Pill button with faint gradient ring
+  pillRing: {
+    padding: 2,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  pillInner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.btnBg,
+    backgroundColor: "#17141f",
     borderColor: colors.panelBorder,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginRight: 8,
   },
   actionBtnText: {
     color: colors.text,
     fontWeight: "600",
     marginLeft: 6,
   },
-  actionBtnGhost: {
+
+  // Ghost pill (outline only)
+  pillGhostRing: {
+    padding: 2,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  pillGhostInner: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "transparent",
     borderColor: colors.panelBorder,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "transparent",
   },
   actionBtnGhostText: {
     color: colors.textDim,
@@ -143,6 +216,7 @@ export const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
+  /* Caption */
   captionWrap: {
     marginTop: 4,
     marginBottom: 12,
@@ -152,7 +226,12 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
     fontSize: 12,
   },
-  captionInput: {
+  // Field with gradient ring
+  fieldRing: {
+    padding: 2,
+    borderRadius: 12,
+  },
+  captionInner: {
     minHeight: 84,
     maxHeight: 140,
     color: colors.text,
@@ -196,10 +275,11 @@ export const styles = StyleSheet.create({
     fontSize: 12,
   },
   locErrorText: {
-    color: "#f87171",
+    color: ig.danger,
     fontSize: 12,
   },
-  locationInput: {
+
+  locationInner: {
     color: colors.text,
     backgroundColor: "#0f141b",
     borderColor: colors.panelBorder,
@@ -209,7 +289,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   locationInputError: {
-    borderColor: "#f87171",
+    borderColor: ig.danger,
   },
   locationNote: {
     color: colors.textDim,
@@ -217,7 +297,7 @@ export const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  /* Post button */
+  /* Post button (kept solid but warm, dark-friendly) */
   postBtn: {
     alignSelf: "flex-end",
     flexDirection: "row",
@@ -227,11 +307,10 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
-
     ...Platform.select({
       ios: {
         shadowColor: colors.accent,
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.25,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 3 },
       },

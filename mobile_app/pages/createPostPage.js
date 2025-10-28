@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// pages/CreatePostPage.js
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -12,11 +13,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-    import { styles, colors } from "../stylesCreatePostPage";
+import { LinearGradient } from "expo-linear-gradient";
+
+import { ig, styles, colors } from "../stylesCreatePostPage";
 import { uploadImage, createPost } from "../components/api";
-import { useContext } from "react";
 import { AuthContext } from "../AuthContext";
 
+/** Create a video thumbnail on web */
 const makeWebVideoThumb = async (videoUri, timeMs = 1000) => {
   const video = document.createElement("video");
   video.src = videoUri;
@@ -26,35 +29,39 @@ const makeWebVideoThumb = async (videoUri, timeMs = 1000) => {
     video.onerror = () => rej(new Error("Video load error"));
   });
   video.currentTime = Math.min(timeMs / 1000, Math.max((video.duration || 2) - 0.1, 0.1));
-  await new Promise((res) => { video.onseeked = res; });
+  await new Promise((res) => {
+    video.onseeked = res;
+  });
 
   const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth || 512;
   canvas.height = video.videoHeight || 512;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
   return new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", 0.85));
 };
-export default function CreatePostPage() {
-    const [selectedMeta, setSelectedMeta] = useState({ fileName: null, mimeType: null });
 
+export default function CreatePostPage() {
+  const { user: authUser } = useContext(AuthContext);
+
+  const [selectedMeta, setSelectedMeta] = useState({ fileName: null, mimeType: null });
   const [selectedUri, setSelectedUri] = useState(null);
   const [caption, setCaption] = useState("");
   const [postedBanner, setPostedBanner] = useState(false);
-    const { user: authUser } = useContext(AuthContext);
+
   // Location state
-      const [locationText, setLocationText] = useState("");
+  const [locationText, setLocationText] = useState("");
   const [locStatus, setLocStatus] = useState("idle"); // idle | fetching | done | error
   const [locError, setLocError] = useState("");
   const [coords, setCoords] = useState({ lat: null, lng: null });
 
-const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.trim();
+  const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.trim();
 
   async function pickImage() {
-    // request permission on native (web typically not needed)
+    // request permission on native
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
       if (status !== "granted") {
         setLocStatus("error");
         setLocError("Photo library permission denied");
@@ -62,18 +69,18 @@ const canPost = Boolean(selectedUri) && locStatus === "done" && !!locationText.t
       }
     }
 
-const result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       aspect: [1, 1], // square crop to match grid vibe
       quality: 0.9,
-
     });
 
     if (!result.canceled && result.assets?.length) {
-    const a = result.assets[0];
+      const a = result.assets[0];
       setSelectedUri(a.uri);
       setSelectedMeta({ fileName: a.fileName ?? null, mimeType: a.mimeType ?? null });
+
       // reset and detect location right after choosing an image
       setLocationText("");
       setLocStatus("idle");
@@ -89,8 +96,8 @@ const result = await ImagePicker.launchImageLibraryAsync({
     setCoords({ lat: null, lng: null });
 
     try {
+      // WEB geolocation
       if (Platform.OS === "web" && navigator?.geolocation) {
-
         await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
@@ -101,7 +108,8 @@ const result = await ImagePicker.launchImageLibraryAsync({
                 reject(new Error("No coords"));
                 return;
               }
-              setLocationText(`${latitude.toFixed(5)},${longitude.toFixed(5)}`);
+              setLocationText(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+              setCoords({ lat: latitude, lng: longitude });
               setLocStatus("done");
               resolve();
             },
@@ -116,7 +124,7 @@ const result = await ImagePicker.launchImageLibraryAsync({
         return;
       }
 
-      // Native: try expo-location (optional dependency via dynamic import)
+      // NATIVE via expo-location (dynamic import so web bundles won’t break)
       try {
         const Location = await import("expo-location");
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -138,7 +146,7 @@ const result = await ImagePicker.launchImageLibraryAsync({
           return;
         }
 
-        // optional: reverse geocode for a nice label
+        // Optional reverse geocode
         let pretty = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
         try {
           const parts = await Location.reverseGeocodeAsync({ latitude, longitude });
@@ -151,9 +159,10 @@ const result = await ImagePicker.launchImageLibraryAsync({
             if (label) pretty = label;
           }
         } catch {
-          // ignore reverse geocode errors, keep coords
+          // ignore reverse geocode issues
         }
 
+        setCoords({ lat: latitude, lng: longitude });
         setLocationText(pretty);
         setLocStatus("done");
         return;
@@ -175,14 +184,16 @@ const result = await ImagePicker.launchImageLibraryAsync({
     setLocError("");
   }
 
-async function onPost() {
-  try {
-    if (!selectedUri) throw new Error("Pick an image or video first");
+  async function onPost() {
+    try {
+      if (!selectedUri) throw new Error("Pick an image or video first");
 
-    // upload; pass picker metadata when available
-    const { filename, mimetype } = await  uploadImage(selectedUri, selectedMeta);
-    const isVideo = (mimetype || "").startsWith("video/") ||
-                    /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(filename);
+      // upload; pass picker metadata when available
+      const { filename, mimetype } = await uploadImage(selectedUri, selectedMeta);
+      const isVideo =
+        (mimetype || "").startsWith("video/") ||
+        /\.(mp4|mov|webm|ogg|ogv|3gp)$/i.test(filename);
+
       // If video: generate & upload a JPG thumbnail
       let thumbname;
       if (isVideo) {
@@ -196,35 +207,44 @@ async function onPost() {
           URL.revokeObjectURL(objUrl);
           thumbname = t.filename;
         } else {
-          // NATIVE: use expo-video-thumbnails (lazy require to avoid web bundling)
+          // NATIVE: expo-video-thumbnails
           const VideoThumbnails = require("expo-video-thumbnails");
           const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(selectedUri, { time: 1000 });
-          const t = await uploadImage(thumbUri, { fileName: `thumb-${Date.now()}.jpg`, mimeType: "image/jpeg" });
+          const t = await uploadImage(thumbUri, {
+            fileName: `thumb-${Date.now()}.jpg`,
+            mimeType: "image/jpeg",
+          });
           thumbname = t.filename;
         }
       }
-    const payload = {
-      postedby: authUser?.username ?? "",
-      posttype: isVideo ? 1 : 0,            // 0=image, 1=video
-      datapath: filename,                   // plain filename from server
-      location: (locationText || "").replace(/\s   /g, ""), // "lat,lng" no spaces
-      thumbpath: thumbname,
-    };
 
-    // sanity guards
-    if (!payload.postedby) throw new Error("No username in AuthContext");
-    if (!payload.datapath) throw new Error("datapath (filename) missing");
+      const payload = {
+        postedby: authUser?.username ?? "",
+        posttype: isVideo ? 1 : 0,  // 0=image, 1=video
+        datapath: filename,         // plain filename from server
+        location: (locationText || "").replace(/\s+/g, ""), // "lat,lng" no spaces
+        thumbpath: thumbname,
+        caption: caption || "",
+      };
 
-    await createPost(payload);
-    // success UI...
-  } catch (e) {
-    console.error(e);
-    Alert.alert("Post failed", String(e?.message ?? e));
+      if (!payload.postedby) throw new Error("No username in AuthContext");
+      if (!payload.datapath) throw new Error("datapath (filename) missing");
+
+      await createPost(payload);
+
+      // success UI
+      setPostedBanner(true);
+      setTimeout(() => setPostedBanner(false), 2200);
+      onClear();
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Post failed", String(e?.message ?? e));
+    }
   }
-}
+
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      // style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Success banner */}
@@ -237,55 +257,64 @@ async function onPost() {
 
       {/* Title */}
       <View style={styles.titleRow}>
-        <Ionicons name="create-outline" size={20} color={colors.brand} />
-        <Text style={styles.title}>Create Post</Text>
+        <View style={styles.titleBubble}>
+          <Text style={styles.title}>Create a Post</Text>
+        </View>
       </View>
 
       {/* Card */}
       <View style={styles.card}>
-        {/* Image preview */}
-        <View style={styles.previewWrap}>
-          {selectedUri ? (
-            <Image source={{ uri: selectedUri }} style={styles.previewImage} />
-          ) : (
-            <View style={styles.previewPlaceholder}>
-              <Ionicons name="image-outline" size={28} color={colors.textDim} />
-              <Text style={styles.placeholderText}>No image selected</Text>
-            </View>
-          )}
-        </View>
+        {/* Image preview with Insta gradient outline */}
+        <LinearGradient colors={ig.gradient} style={styles.previewRing}>
+          <View style={styles.previewInner}>
+            {selectedUri ? (
+              <Image source={{ uri: selectedUri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={colors.textDim} />
+                <Text style={styles.placeholderText}>No image selected</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
 
-        {/* Actions */}
+        {/* Actions with faint gradient outline */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionBtn} onPress={pickImage}>
-            <Ionicons name="cloud-upload-outline" size={18} color={colors.text} />
-            <Text style={styles.actionBtnText}>Choose Image</Text>
-          </TouchableOpacity>
+          <LinearGradient colors={ig.gradientFaint} style={styles.pillRing}>
+            <TouchableOpacity style={styles.pillInner} onPress={pickImage}>
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.text} />
+              <Text style={styles.actionBtnText}>Choose Image</Text>
+            </TouchableOpacity>
+          </LinearGradient>
 
           {selectedUri && (
-            <TouchableOpacity style={styles.actionBtnGhost} onPress={onClear}>
-              <Ionicons name="close-circle-outline" size={18} color={colors.textDim} />
-              <Text style={styles.actionBtnGhostText}>Clear</Text>
-            </TouchableOpacity>
+            <LinearGradient colors={ig.gradientFaint} style={styles.pillGhostRing}>
+              <TouchableOpacity style={styles.pillGhostInner} onPress={onClear}>
+                <Ionicons name="close-circle-outline" size={18} color={colors.textDim} />
+                <Text style={styles.actionBtnGhostText}>Clear</Text>
+              </TouchableOpacity>
+            </LinearGradient>
           )}
         </View>
 
-        {/* Caption */}
+        {/* Caption with faint gradient outline */}
         <View style={styles.captionWrap}>
           <Text style={styles.captionLabel}>Caption</Text>
-          <TextInput
-            value={caption}
-            onChangeText={setCaption}
-            placeholder="Write something..."
-            placeholderTextColor={colors.textDim}
-            style={styles.captionInput}
-            multiline
-            maxLength={2200}
-          />
+          <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
+            <TextInput
+              value={caption}
+              onChangeText={setCaption}
+              placeholder="Write something..."
+              placeholderTextColor={colors.textDim}
+              style={styles.captionInner}
+              multiline
+              maxLength={2200}
+            />
+          </LinearGradient>
           <Text style={styles.captionCount}>{caption.length}/2200</Text>
         </View>
 
-        {/* Location */}
+        {/* Location with faint gradient outline */}
         <View style={styles.locationWrap}>
           <View style={styles.locationHeader}>
             <Text style={styles.locationLabel}>Location</Text>
@@ -302,17 +331,20 @@ async function onPost() {
             )}
           </View>
 
-          <TextInput
-            value={locationText}
-            onChangeText={setLocationText}
-            placeholder="Location will auto-fill after image is chosen"
-            placeholderTextColor={colors.textDim}
-            style={[
-              styles.locationInput,
-              locStatus === "error" && styles.locationInputError,
-            ]}
-            editable={true}
-          />
+          <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
+            <TextInput
+              value={locationText}
+              onChangeText={setLocationText}
+              placeholder="Location will auto-fill after image is chosen"
+              placeholderTextColor={colors.textDim}
+              style={[
+                styles.locationInner,
+                locStatus === "error" && styles.locationInputError,
+              ]}
+              editable={true}
+            />
+          </LinearGradient>
+
           <Text style={styles.locationNote}>
             Location is required to post. We auto-detect after you pick an image.
           </Text>
