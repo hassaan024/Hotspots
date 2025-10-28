@@ -1,73 +1,93 @@
-// stylesLoginPage.js
 import { StyleSheet, Platform } from "react-native";
 
-/** Instagram-inspired dark palette */
 export const colors = {
   bg: "#0B0A0E",
-  panel: "rgba(18,16,24,0.72)",     // glassy panel
-  panelSolid: "#121018",
+  panel: "rgba(18,16,24,0.78)",   // glassy card
   panelBorder: "#2A1E33",
   text: "#F5F6F8",
   textDim: "#B6BAC4",
-  brand: "#8a49a1",                  // purple
-  brandAlt: "#c1558b",               // magenta
-  brandPink: "#e56969",              // coral
-  accent: "#ffc223",                 // warm amber
-  accentGlow: "#ffdf9e",             // soft glow
+  brand: "#8a49a1",
+  brandAlt: "#c1558b",
+  brandPink: "#e56969",
+  accent: "#ffc300",
+  accentGlow: "#ffdf9e",
   btnBg: "#1A1722",
 };
 
-const radius = 16;
+const radius = 18;
 
 export const styles = StyleSheet.create({
   app: {
     flex: 1,
-    backgroundColor: colors.bg, // native fallback if no CSS
+    backgroundColor: colors.bg,
   },
 
   pageWrap: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 24,
-    justifyContent: "center",
   },
 
+  /** ===== Glossy 3D Card ===== */
   card: {
-    alignSelf: "center",
+    position: "relative",
     width: "100%",
     maxWidth: 460,
-    backgroundColor: colors.panel,
-    borderColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
+    padding: 26,
     borderRadius: radius,
-    padding: 22,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: colors.panel,
+    overflow: "hidden",
 
-    // glass glow
+    // shadow + glow for 3D feel
     ...Platform.select({
       ios: {
-        shadowColor: colors.brand,
-        shadowOpacity: 0.22,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 10 },
+        shadowColor: colors.accentGlow,
+        shadowOpacity: 0.25,
+        shadowRadius: 30,
+        shadowOffset: { width: 0, height: 12 },
       },
-      android: { elevation: 4 },
-      default: {},
+      android: { elevation: 6 },
     }),
+  },
+
+  /** ===== Gloss Layer (pseudo-light reflection) ===== */
+  gloss: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    opacity: 0.3,
+    borderTopLeftRadius: radius,
+    borderTopRightRadius: radius,
+    transform: [{ skewY: "-6deg" }],
   },
 
   brandRow: {
     alignItems: "center",
     marginBottom: 8,
   },
+
   brandBadge: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
     fontSize: 14,
     fontWeight: "800",
-    color: "#1b1406",
-    backgroundColor: colors.accent,
-    overflow: "hidden",
+    color: "#ffffff",
+    backgroundColor: "#FF7A00", // fallback for Android
+    backgroundImage:
+      "linear-gradient(90deg, #FF7A00, #FF0069, #D300C5, #7638FA)",
+      // shadowColor: "#FF7A00",
+      // shadowOpacity: 0.6,
+      // shadowRadius: 18,
+      // shadowOffset: { width: 0, height: 6 },
+
   },
 
   title: {
@@ -76,9 +96,8 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.text,
     marginTop: 10,
-    textShadowColor: "rgba(138,73,161,0.35)",
-    textShadowRadius: 14,
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowColor: "rgba(138,73,161,0.4)",
+    textShadowRadius: 12,
   },
   subtitle: {
     textAlign: "center",
@@ -91,9 +110,10 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(16,13,22,0.75)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+    marginBottom: 10,
   },
   label: {
     color: colors.textDim,
@@ -102,11 +122,10 @@ export const styles = StyleSheet.create({
   },
   input: {
     color: colors.text,
-    backgroundColor: "transparent",
-    borderWidth: 0,
     paddingHorizontal: 6,
     paddingVertical: 8,
     borderRadius: 10,
+    backgroundColor: "transparent",
   },
 
   error: {
@@ -115,34 +134,46 @@ export const styles = StyleSheet.create({
     marginTop: 12,
   },
 
+  /** ===== Login Button (Neon Gradient Glow) ===== */
   ctaBtn: {
-    marginTop: 18,
+    marginTop: 22,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
+    paddingVertical: 13,
+    borderRadius: 14,
+    overflow: "hidden",
+    position: "relative",
+
+    // Add soft outer glow
+    // shadowColor: "#FF7A00",
+    // shadowOpacity: 0.6,
+    // shadowRadius: 18,
+    // shadowOffset: { width: 0, height: 6 },
+
+    // Use a background gradient look
+    backgroundColor: "#FF7A00", // fallback for Android
+    backgroundImage:
+      "linear-gradient(90deg, #FFD600, #FF7A00, #FF0069, #D300C5, #7638FA)",
     borderWidth: 1,
-    borderColor: colors.accentGlow,
+    // borderColor: "rgba(255,255,255,0.2)",
 
     ...Platform.select({
       ios: {
-        shadowColor: colors.accentGlow,
-        shadowOpacity: 0.45,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 4 },
+        shadowColor: "#FF7A00",
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
       },
-      android: { elevation: 3 },
+      android: { elevation: 6 },
     }),
   },
-  ctaBtnDisabled: {
-    opacity: 0.7,
-  },
   ctaText: {
-    color: "#1b1406",
-    fontWeight: "900",
-    fontSize: 15,
-    letterSpacing: 0.3,
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 16,
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowRadius: 5,
   },
 
   note: {

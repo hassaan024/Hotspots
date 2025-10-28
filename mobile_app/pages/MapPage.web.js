@@ -336,8 +336,13 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
   }, []);
 
   return (
+    <>
+    <View style={styles.titleRow}>
+      <View style={styles.titleBubble}>
+        <Text style={styles.title}>Maps</Text>
+      </View>
+    </View>
     <View style={styles.screenMap}>
-      <Text style={styles.screenTitle}>Map</Text>
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
       ) : (
@@ -431,5 +436,6 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
         </Modal>
       )}
     </View>
+    </>
   );
 }

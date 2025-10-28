@@ -100,10 +100,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.panel,
     borderRadius: 14,
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 32,
-    paddingBottom: 32,
+    // paddingLeft: 5,
+    // paddingRight: 5,
+    // paddingTop: 32,
+    // paddingBottom: 32,
     borderWidth: 1,
     borderColor: colors.panelBorder,
   },
@@ -131,6 +131,7 @@ export const styles = StyleSheet.create({
     borderColor: "#ddd",
     height: "95%",
     width: "100%",
+    borderRadius: 14,
   },
   mapLoadingOverlay: {
     position: "absolute",
@@ -148,35 +149,70 @@ export const styles = StyleSheet.create({
     marginTop: 12,
   },
   //everything below this is for the posts
-    postWrapper: {
-      width : "100%",
-      backgroundColor:colors.panelBorder,
-      padding: 16,
-    },
-    postBox: {
-      backgroundColor: colors.panel,
-      borderRadius: 32,
-      marginVertical: 10,
-      overflow: "hidden",
-      
-    },
-    username: {
-      color: "#fff",
-      fontWeight: "bold",
-      marginBottom: 5,
-      marginLeft: 5,
-    },
-    text: {
-      color: "#fff",
-      marginLeft: 5,
-    },
-    boldUsername: {
-      fontWeight: "bold",
-      color: "#fff",
-    },
-    image: {
-      width: '100%',
-      height: 750,
-      resizeMode: 'cover',
-    },
+  postWrapper: {
+    width : "100%",
+    backgroundColor:colors.panelBorder,
+    padding: 16,
+  },
+  postBox: {
+    backgroundColor: colors.panel,
+    borderRadius: 32,
+    marginVertical: 10,
+    overflow: "hidden",
+    
+  },
+  username: {
+    color: "#fff",
+    fontWeight: "bold",
+    marginBottom: 5,
+    marginLeft: 5,
+  },
+  text: {
+    color: "#fff",
+    marginLeft: 5,
+  },
+  boldUsername: {
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  image: {
+    width: '100%',
+    height: 750,
+    resizeMode: 'cover',
+  },
+  /** ===== Title Bubble (Neon Gradient Style) ===== */
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    marginTop: 6,
+  },
+  titleBubble: {
+    borderRadius: 40,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+
+    // Instagram-style gradient glow
+    backgroundColor: "#FF7A00",
+    backgroundImage:
+      "linear-gradient(90deg, #FFD600, #FF7A00, #FF0069, #D300C5, #7638FA)",
+    // shadowColor: "#FF7A00",
+    // shadowOpacity: 0.5,
+    // shadowRadius: 10,
+    // shadowOffset: { width: 0, height: 3 },
+    // borderWidth: 1,
+    // borderColor: "rgba(255,255,255,0.2)",
+  },
+
+  title: {
+    color: "#fff",
+    fontSize: 17, // subtle and clean
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowRadius: 6,
+  },
 });
