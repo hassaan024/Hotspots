@@ -1,15 +1,11 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
 import { z, ZodError } from "zod";
 import { usersDb } from "./db_users";
-import { createUserSchema, updateUserSchema , loginSchema} from "./validators";
-import jwt from "jsonwebtoken";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-
+import { createUserSchema, updateUserSchema, loginSchema } from "./validators";
+// import jwt from "jsonwebtoken"; // unused right now
 
 const router = Router();
-
-
 const safeUserSelect = { username: true, email: true } as const;
 
 router.get("/", async (_req, res, next) => {
@@ -26,10 +22,10 @@ router.get("/:username", async (req, res, next) => {
   try {
     const user = await usersDb.users.findUnique({
       where: { username: req.params.username },
-      select: safeUserSelect
+      select: safeUserSelect,
     });
-    if (!u) return res.status(404).json({ error: "User not found" });
-    res.json(u);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
   } catch (e) { next(e); }
 });
 
@@ -38,10 +34,9 @@ router.post("/", async (req, res, next) => {
     const { username, email, password } = createUserSchema.parse(req.body);
     const passwordHash = await bcrypt.hash(password, 12);
     const created = await usersDb.users.create({
-    data: { username, email, passwordHash },
-    select: { username: true, email: true},
+      data: { username, email, passwordHash },
+      select: { username: true, email: true },
     });
-
     return res.status(201).json(created);
   } catch (err: any) {
     if (err?.code === "P2002") {
@@ -59,7 +54,6 @@ router.patch("/:username", async (req, res, next) => {
     const { username } = req.params;
     const data = updateUserSchema.parse(req.body);
     if ("passwordHash" in data) delete (data as any).passwordHash;
-
     const updated = await usersDb.users.update({
       where: { username },
       data,
@@ -82,39 +76,30 @@ router.post("/login", async (req, res, next) => {
     const parsed = loginSchema.parse(req.body);
     const username = parsed.username?.trim();
     const password = parsed.password;
-    if (!username) {
-      return res.status(400).json({ error: "username is required" });
-    }
-    if (!password) {
-      return res.status(400).json({ error: "password is required" });
-    }
+    if (!username) return res.status(400).json({ error: "username is required" });
+    if (!password) return res.status(400).json({ error: "password is required" });
 
     const user = await usersDb.users.findUnique({ where: { username } });
-    if (!user) {
-      return res.status(401).json({ error: "Invalid username or password" });
-    }
+    if (!user) return res.status(401).json({ error: "Invalid username or password" });
+    const token = jwt.sign({ sub: user.username }, JWT_SECRET, { expiresIn: "7d" });
 
     const passwordHash =
       (user as any).passwordHash ?? (user as any).password_hash ?? null;
     if (!passwordHash) {
-
       return res.status(500).json({ error: "password hash not configured for user model" });
     }
 
-
     const ok = await bcrypt.compare(password, passwordHash);
-    if (!ok) {
-      return res.status(401).json({ error: "Invalid username or password" });
-    }
+    if (!ok) return res.status(401).json({ error: "Invalid username or password" });
 
-
+    // Cookie is set RIGHT HERE:
     res.cookie("hs_user", JSON.stringify({ username: user.username }), {
       httpOnly: true,
-      sameSite: "lax",      // for same-site dev; use "none" + secure:true for cross-site HTTPS
+      sameSite: "lax",   // for same-origin dev; use "none" + secure:true on HTTPS for cross-origin
       secure: false,
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
 
     const { passwordHash: _ph, password_hash: _ph2, ...safe } = (user as any);
     return res.json(safe);
@@ -124,80 +109,63 @@ router.post("/login", async (req, res, next) => {
     }
     next(err);
   }
+
 });
+
 const usernameParam = z.object({ username: z.string().min(1).max(25) });
 
 router.post("/:username/follow", async (req: Request, res: Response) => {
+  const { username: followee } = usernameParam.parse(req.params);
+  const follower = (req as any).user?.username as string;
+  if (!follower) return res.status(401).json({ error: "Unauthenticated" });
+  if (follower === followee) return res.status(400).json({ error: "Cannot follow yourself" });
+
+  const exists = await usersDb.users.findUnique({ where: { username: followee }, select: { username: true } });
+  if (!exists) return res.status(404).json({ error: "User not found" });
+
   try {
-    const { username: followee } = usernameParam.parse(req.params);
-    const follower = (req as any).user?.username as string; // adjust based on your auth
-    if (!follower) return res.status(401).json({ error: "Unauthenticated" });
-    if (follower === followee) return res.status(400).json({ error: "Cannot follow yourself" });
-
-    // verify followee exists (optional but nice)
-    const exists = await prisma.user.findUnique({ where: { username: followee }, select: { username: true } });
-    if (!exists) return res.status(404).json({ error: "User not found" });
-
-    // create the follow (idempotent handling)
-    try {
-      const created = await prisma.followers.create({
-        data: { follower, followee },
-        select: { follower: true, followee: true, followedAt: true }
-      });
-      return res.status(201).json(created);
-    } catch (e: any) {
-      // P2002 = unique constraint violation (already following)
-      if (e.code === "P2002") {
-        return res.status(200).json({ follower, followee, alreadyFollowing: true });
-      }
-      throw e;
+    const created = await usersDb.followers.create({
+      data: { follower, followee },
+      select: { follower: true, followee: true, followed_at: true },
+    });
+    return res.status(201).json(created);
+  } catch (e: any) {
+    if (e.code === "P2002") {
+      return res.status(200).json({ follower, followee, alreadyFollowing: true });
     }
-  } catch (err: any) {
-    return res.status(400).json({ error: err?.message ?? "Bad request" });
+    throw e;
   }
 });
 
 router.delete("/:username/follow", async (req: Request, res: Response) => {
-  try {
-    const { username: followee } = usernameParam.parse(req.params);
-    const follower = (req as any).user?.username as string;
-    if (!follower) return res.status(401).json({ error: "Unauthenticated" });
-    if (follower === followee) return res.status(400).json({ error: "Cannot unfollow yourself" });
+  const { username: followee } = usernameParam.parse(req.params);
+  const follower = (req as any).user?.username as string;
+  if (!follower) return res.status(401).json({ error: "Unauthenticated" });
+  if (follower === followee) return res.status(400).json({ error: "Cannot unfollow yourself" });
 
-    // composite key delete (use deleteMany for easy idempotency)
-    const result = await prisma.followers.deleteMany({
-      where: { follower, followee }
-    });
+  const result = await usersDb.followers.deleteMany({ where: { follower, followee } });
+  if (result.count === 0) return res.status(204).send();
+  return res.status(200).json({ follower, followee, unfollowed: true });
+});
 
-    // 204 for idempotent behavior, or 200 with info if you prefer
-    if (result.count === 0) return res.status(204).send();
-    return res.status(200).json({ follower, followee, unfollowed: true });
-  } catch (err: any) {
-    return res.status(400).json({ error: err?.message ?? "Bad request" });
-  }
+router.get("/:username/followers", async (req, res) => {
+  const { username } = usernameParam.parse(req.params);
+  const rows = await usersDb.followers.findMany({
+    where: { followee: username },
+    select: { follower: true, followed_at: true },
+    orderBy: { followed_at: "desc" },
   });
+  res.json(rows);
+});
 
-  // GET /:username/followers
-  router.get("/:username/followers", async (req, res) => {
-    const { username } = usernameParam.parse(req.params);
-    const rows = await usersDb.followers.findMany({
-      where: { followee: username },
-      select: { follower: true, followed_at: true },
-      orderBy: { followed_at: "desc" }
-    });
-    res.json(rows);
+router.get("/:username/following", async (req, res) => {
+  const { username } = usernameParam.parse(req.params);
+  const rows = await usersDb.followers.findMany({
+    where: { follower: username },
+    select: { followee: true, followed_at: true },
+    orderBy: { followed_at: "desc" },
   });
-
-  // GET /:username/following
-  router.get("/:username/following", async (req, res) => {
-    const { username } = usernameParam.parse(req.params);
-    const rows = await usersDb.followers.findMany({
-      where: { follower: username },
-      select: { followee: true, followed_at: true },
-      orderBy: { followed_at: "desc" }
-    });
-    res.json(rows);
-  });
+  res.json(rows);
+});
 
 export default router;
-
