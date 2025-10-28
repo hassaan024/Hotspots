@@ -1,67 +1,68 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // Icon set
-import { styles } from "../styles";
+import { View, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { styles, insta } from "../stylesNavbar";
 
 export default function Navbar({ current, onChange }) {
   const size = 22;
   const activeColor = "#ffffff";
-  const inactiveColor = "#9aa0a6";
+  const inactiveColor = insta.dim;
+
+  const NavButton = ({ isActive, onPress, icon, iconActive }) => (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <LinearGradient
+        colors={isActive ? insta.gradientColors : insta.gradientColorsFaint}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.ring, isActive && styles.ringActive]}
+      >
+        <View style={styles.ringInner}>
+          <Ionicons
+            name={isActive ? iconActive : icon}
+            size={size}
+            color={isActive ? activeColor : inactiveColor}
+          />
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.navbar}>
-      <Text style={styles.brand}>Hotspots</Text>
+    <View style={styles.navbarWrap}>
+      {/* Dark glossy/blurred background */}
+      <BlurView intensity={35} tint="dark" style={styles.blur} />
+      <View style={styles.overlay} />
 
-      <View style={styles.navButtons}>
-        {/* Map */}
-        <TouchableOpacity
-          style={[styles.navBtn, current === "map" && styles.navBtnActive]}
-          onPress={() => onChange("map")}
-        >
-          <Ionicons
-            name={current === "map" ? "map" : "map-outline"}
-            size={size}
-            color={current === "map" ? activeColor : inactiveColor}
+      {/* Centered buttons */}
+      <View style={styles.navbar}>
+        <View style={styles.navButtons}>
+          <NavButton
+            isActive={current === "map"}
+            onPress={() => onChange("map")}
+            icon="map-outline"
+            iconActive="map"
           />
-        </TouchableOpacity>
-
-        {/* Posts (feed) */}
-        <TouchableOpacity
-          style={[styles.navBtn, current === "posts" && styles.navBtnActive]}
-          onPress={() => onChange("posts")}
-        >
-          <Ionicons
-            name={current === "posts" ? "grid" : "grid-outline"}
-            size={size}
-            color={current === "posts" ? activeColor : inactiveColor}
+          <NavButton
+            isActive={current === "posts"}
+            onPress={() => onChange("posts")}
+            icon="grid-outline"
+            iconActive="grid"
           />
-        </TouchableOpacity>
-
-        {/* Create Post */}
-        <TouchableOpacity
-          style={[styles.navBtn, current === "createPost" && styles.navBtnActive]}
-          onPress={() => onChange("createPost")}
-        >
-          <Ionicons
-            name={current === "createPost" ? "create" : "create-outline"}
-            size={size}
-            color={current === "createPost" ? activeColor : inactiveColor}
+          <NavButton
+            isActive={current === "createPost"}
+            onPress={() => onChange("createPost")}
+            icon="create-outline"
+            iconActive="create"
           />
-        </TouchableOpacity>
-
-        {/* Profile */}
-        <TouchableOpacity
-          style={[styles.navBtn, current === "profile" && styles.navBtnActive]}
-          onPress={() => onChange("profile")}
-        >
-          <Ionicons
-            name={
-              current === "profile" ? "person-circle" : "person-circle-outline"
-            }
-            size={size + 2}
-            color={current === "profile" ? activeColor : inactiveColor}
+          <NavButton
+            isActive={current === "profile"}
+            onPress={() => onChange("profile")}
+            icon="person-circle-outline"
+            iconActive="person-circle"
           />
-        </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
