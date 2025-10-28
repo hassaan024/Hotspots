@@ -1,68 +1,69 @@
+// Navbar.js
 import React from "react";
 import { View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import { styles, insta } from "../stylesNavbar";
+import { styles, ig } from "../stylesNavbar";
 
 export default function Navbar({ current, onChange }) {
-  const size = 22;
-  const activeColor = "#ffffff";
-  const inactiveColor = insta.dim;
-
-  const NavButton = ({ isActive, onPress, icon, iconActive }) => (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <LinearGradient
-        colors={isActive ? insta.gradientColors : insta.gradientColorsFaint}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.ring, isActive && styles.ringActive]}
-      >
-        <View style={styles.ringInner}>
-          <Ionicons
-            name={isActive ? iconActive : icon}
-            size={size}
-            color={isActive ? activeColor : inactiveColor}
-          />
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+  const size = 24;
+  const activeColor = "#fff";
+  const inactiveColor = "#9ca3af";
 
   return (
     <View style={styles.navbarWrap}>
-      {/* Dark glossy/blurred background */}
-      <BlurView intensity={35} tint="dark" style={styles.blur} />
-      <View style={styles.overlay} />
+      {/* Gradient top border */}
+      <LinearGradient colors={ig.gradient} style={styles.navbarGradient} />
 
-      {/* Centered buttons */}
+      {/* Navbar background */}
       <View style={styles.navbar}>
-        <View style={styles.navButtons}>
-          <NavButton
-            isActive={current === "map"}
-            onPress={() => onChange("map")}
-            icon="map-outline"
-            iconActive="map"
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onChange("map")}
+        >
+          <Ionicons
+            name={current === "map" ? "map" : "map-outline"}
+            size={size}
+            color={current === "map" ? activeColor : inactiveColor}
           />
-          <NavButton
-            isActive={current === "posts"}
-            onPress={() => onChange("posts")}
-            icon="grid-outline"
-            iconActive="grid"
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onChange("posts")}
+        >
+          <Ionicons
+            name={current === "posts" ? "grid" : "grid-outline"}
+            size={size}
+            color={current === "posts" ? activeColor : inactiveColor}
           />
-          <NavButton
-            isActive={current === "createPost"}
-            onPress={() => onChange("createPost")}
-            icon="create-outline"
-            iconActive="create"
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onChange("createPost")}
+        >
+          <Ionicons
+            name={current === "createPost" ? "create" : "create-outline"}
+            size={size}
+            color={current === "createPost" ? activeColor : inactiveColor}
           />
-          <NavButton
-            isActive={current === "profile"}
-            onPress={() => onChange("profile")}
-            icon="person-circle-outline"
-            iconActive="person-circle"
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onChange("profile")}
+        >
+          <Ionicons
+            name={
+              current === "profile"
+                ? "person-circle"
+                : "person-circle-outline"
+            }
+            size={size + 2}
+            color={current === "profile" ? activeColor : inactiveColor}
           />
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
