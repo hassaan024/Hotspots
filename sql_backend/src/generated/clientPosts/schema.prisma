@@ -16,13 +16,14 @@ enum CommentStatus {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model posts {
-  postid     Int     @id @default(autoincrement())
-  postedby   String  @db.VarChar(25)
-  posttype   Int
-  datapath   String  @db.VarChar(255)
-  location   String? @db.VarChar(50)
-  visibility Int?    @default(2)
-  thumbpath  String? @db.VarChar(255)
+  postid      Int     @id @default(autoincrement())
+  postedby    String  @db.VarChar(25)
+  posttype    Int
+  datapath    String  @db.VarChar(255)
+  location    String? @db.VarChar(50)
+  visibility  Int?    @default(2)
+  thumbpath   String? @db.VarChar(255)
+  description String? @db.VarChar(255)
 
   @@index([postedby], map: "posts_users_username_fk")
 }

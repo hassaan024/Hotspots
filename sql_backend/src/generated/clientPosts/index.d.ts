@@ -1053,6 +1053,7 @@ export namespace Prisma {
     location: string | null
     visibility: number | null
     thumbpath: string | null
+    description: string | null
   }
 
   export type PostsMaxAggregateOutputType = {
@@ -1063,6 +1064,7 @@ export namespace Prisma {
     location: string | null
     visibility: number | null
     thumbpath: string | null
+    description: string | null
   }
 
   export type PostsCountAggregateOutputType = {
@@ -1073,6 +1075,7 @@ export namespace Prisma {
     location: number
     visibility: number
     thumbpath: number
+    description: number
     _all: number
   }
 
@@ -1097,6 +1100,7 @@ export namespace Prisma {
     location?: true
     visibility?: true
     thumbpath?: true
+    description?: true
   }
 
   export type PostsMaxAggregateInputType = {
@@ -1107,6 +1111,7 @@ export namespace Prisma {
     location?: true
     visibility?: true
     thumbpath?: true
+    description?: true
   }
 
   export type PostsCountAggregateInputType = {
@@ -1117,6 +1122,7 @@ export namespace Prisma {
     location?: true
     visibility?: true
     thumbpath?: true
+    description?: true
     _all?: true
   }
 
@@ -1214,6 +1220,7 @@ export namespace Prisma {
     location: string | null
     visibility: number | null
     thumbpath: string | null
+    description: string | null
     _count: PostsCountAggregateOutputType | null
     _avg: PostsAvgAggregateOutputType | null
     _sum: PostsSumAggregateOutputType | null
@@ -1243,6 +1250,7 @@ export namespace Prisma {
     location?: boolean
     visibility?: boolean
     thumbpath?: boolean
+    description?: boolean
   }, ExtArgs["result"]["posts"]>
 
 
@@ -1254,6 +1262,7 @@ export namespace Prisma {
     location?: boolean
     visibility?: boolean
     thumbpath?: boolean
+    description?: boolean
   }
 
 
@@ -1268,6 +1277,7 @@ export namespace Prisma {
       location: string | null
       visibility: number | null
       thumbpath: string | null
+      description: string | null
     }, ExtArgs["result"]["posts"]>
     composites: {}
   }
@@ -1644,6 +1654,7 @@ export namespace Prisma {
     readonly location: FieldRef<"posts", 'String'>
     readonly visibility: FieldRef<"posts", 'Int'>
     readonly thumbpath: FieldRef<"posts", 'String'>
+    readonly description: FieldRef<"posts", 'String'>
   }
     
 
@@ -3689,7 +3700,8 @@ export namespace Prisma {
     datapath: 'datapath',
     location: 'location',
     visibility: 'visibility',
-    thumbpath: 'thumbpath'
+    thumbpath: 'thumbpath',
+    description: 'description'
   };
 
   export type PostsScalarFieldEnum = (typeof PostsScalarFieldEnum)[keyof typeof PostsScalarFieldEnum]
@@ -3788,6 +3800,7 @@ export namespace Prisma {
     location?: StringNullableFilter<"posts"> | string | null
     visibility?: IntNullableFilter<"posts"> | number | null
     thumbpath?: StringNullableFilter<"posts"> | string | null
+    description?: StringNullableFilter<"posts"> | string | null
   }
 
   export type postsOrderByWithRelationInput = {
@@ -3798,6 +3811,7 @@ export namespace Prisma {
     location?: SortOrderInput | SortOrder
     visibility?: SortOrderInput | SortOrder
     thumbpath?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
   }
 
   export type postsWhereUniqueInput = Prisma.AtLeast<{
@@ -3811,6 +3825,7 @@ export namespace Prisma {
     location?: StringNullableFilter<"posts"> | string | null
     visibility?: IntNullableFilter<"posts"> | number | null
     thumbpath?: StringNullableFilter<"posts"> | string | null
+    description?: StringNullableFilter<"posts"> | string | null
   }, "postid">
 
   export type postsOrderByWithAggregationInput = {
@@ -3821,6 +3836,7 @@ export namespace Prisma {
     location?: SortOrderInput | SortOrder
     visibility?: SortOrderInput | SortOrder
     thumbpath?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
     _count?: postsCountOrderByAggregateInput
     _avg?: postsAvgOrderByAggregateInput
     _max?: postsMaxOrderByAggregateInput
@@ -3839,6 +3855,7 @@ export namespace Prisma {
     location?: StringNullableWithAggregatesFilter<"posts"> | string | null
     visibility?: IntNullableWithAggregatesFilter<"posts"> | number | null
     thumbpath?: StringNullableWithAggregatesFilter<"posts"> | string | null
+    description?: StringNullableWithAggregatesFilter<"posts"> | string | null
   }
 
   export type CommentWhereInput = {
@@ -3961,6 +3978,7 @@ export namespace Prisma {
     location?: string | null
     visibility?: number | null
     thumbpath?: string | null
+    description?: string | null
   }
 
   export type postsUncheckedCreateInput = {
@@ -3971,6 +3989,7 @@ export namespace Prisma {
     location?: string | null
     visibility?: number | null
     thumbpath?: string | null
+    description?: string | null
   }
 
   export type postsUpdateInput = {
@@ -3980,6 +3999,7 @@ export namespace Prisma {
     location?: NullableStringFieldUpdateOperationsInput | string | null
     visibility?: NullableIntFieldUpdateOperationsInput | number | null
     thumbpath?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type postsUncheckedUpdateInput = {
@@ -3990,6 +4010,7 @@ export namespace Prisma {
     location?: NullableStringFieldUpdateOperationsInput | string | null
     visibility?: NullableIntFieldUpdateOperationsInput | number | null
     thumbpath?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type postsCreateManyInput = {
@@ -4000,6 +4021,7 @@ export namespace Prisma {
     location?: string | null
     visibility?: number | null
     thumbpath?: string | null
+    description?: string | null
   }
 
   export type postsUpdateManyMutationInput = {
@@ -4009,6 +4031,7 @@ export namespace Prisma {
     location?: NullableStringFieldUpdateOperationsInput | string | null
     visibility?: NullableIntFieldUpdateOperationsInput | number | null
     thumbpath?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type postsUncheckedUpdateManyInput = {
@@ -4019,6 +4042,7 @@ export namespace Prisma {
     location?: NullableStringFieldUpdateOperationsInput | string | null
     visibility?: NullableIntFieldUpdateOperationsInput | number | null
     thumbpath?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type CommentCreateInput = {
@@ -4203,6 +4227,7 @@ export namespace Prisma {
     location?: SortOrder
     visibility?: SortOrder
     thumbpath?: SortOrder
+    description?: SortOrder
   }
 
   export type postsAvgOrderByAggregateInput = {
@@ -4219,6 +4244,7 @@ export namespace Prisma {
     location?: SortOrder
     visibility?: SortOrder
     thumbpath?: SortOrder
+    description?: SortOrder
   }
 
   export type postsMinOrderByAggregateInput = {
@@ -4229,6 +4255,7 @@ export namespace Prisma {
     location?: SortOrder
     visibility?: SortOrder
     thumbpath?: SortOrder
+    description?: SortOrder
   }
 
   export type postsSumOrderByAggregateInput = {

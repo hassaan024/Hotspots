@@ -21,6 +21,7 @@ model posts {
   location   String? @db.VarChar(50)
   visibility Int?    @default(2)
   thumbpath   String?  @db.VarChar(255)
+  description String? @db.VarChar(255)
 
   @@index([postedby], map: "posts_users_username_fk")
 }

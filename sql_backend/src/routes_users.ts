@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import { z, ZodError } from "zod";
 import { usersDb } from "./db_users";
 import { createUserSchema, updateUserSchema , loginSchema} from "./validators";
-
+import jwt from "jsonwebtoken";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 
 const router = Router();
@@ -81,24 +82,41 @@ router.post("/login", async (req, res, next) => {
     const parsed = loginSchema.parse(req.body);
     const username = parsed.username?.trim();
     const password = parsed.password;
+    if (!username) {
+      return res.status(400).json({ error: "username is required" });
+    }
+    if (!password) {
+      return res.status(400).json({ error: "password is required" });
+    }
 
-    if (!username) return res.status(400).json({ error: "username is required" });
-
-    const user = await usersDb.users.findUnique({
-      where: { username },
-      select: { username: true, email: true, passwordHash: true },
-    });
-    if(user == null){
-        return res.status(400).json({error: "not a registerd user"});}
-
-    if (!user?.passwordHash) {
+    const user = await usersDb.users.findUnique({ where: { username } });
+    if (!user) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: "Invalid username or password" });
+    const passwordHash =
+      (user as any).passwordHash ?? (user as any).password_hash ?? null;
+    if (!passwordHash) {
 
-    const { passwordHash: _ph, ...safe } = user;
+      return res.status(500).json({ error: "password hash not configured for user model" });
+    }
+
+
+    const ok = await bcrypt.compare(password, passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+
+    res.cookie("hs_user", JSON.stringify({ username: user.username }), {
+      httpOnly: true,
+      sameSite: "lax",      // for same-site dev; use "none" + secure:true for cross-site HTTPS
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+
+    const { passwordHash: _ph, password_hash: _ph2, ...safe } = (user as any);
     return res.json(safe);
   } catch (err) {
     if (err instanceof ZodError) {

@@ -129,7 +129,8 @@ exports.Prisma.PostsScalarFieldEnum = {
   datapath: 'datapath',
   location: 'location',
   visibility: 'visibility',
-  thumbpath: 'thumbpath'
+  thumbpath: 'thumbpath',
+  description: 'description'
 };
 
 exports.Prisma.CommentScalarFieldEnum = {

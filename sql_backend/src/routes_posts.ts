@@ -156,11 +156,11 @@ router.post("/upload", upload.single("file"), (req, res) => {
 });
 // GET latest N comments (top-level or replies) with keyset pagination
 function authRequired(req, res, next) {
-  // Replace with your real auth (cookie, session, jwt). Yesterday you saw
-  // “auth_required is not defined” because the guard wasn’t imported/defined.
-  if (req.user?.username) return next();
+  const u = (req as any).user;
+  if (u?.username) return next();
   return res.status(401).json({ error: "auth required" });
 }
+
 
 // Shape the comment to what the UI renders: { commentid, postid, parentid, username, text, created_at }
 const toWireComment = (c: any) => ({

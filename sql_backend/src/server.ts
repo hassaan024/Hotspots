@@ -7,20 +7,29 @@ import multer from "multer";
 import fs from "node:fs";
 import path from "node:path";
 
-
+import cookieParser from "cookie-parser";
 import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
 import cors from 'cors';
 
 const WEB_ORIGIN = 'http://localhost:8081';
 const app = express();
-
+app.use(cookieParser());
+app.use((req, _res, next) => {
+  try {
+    const raw = req.cookies?.hs_user;
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.username) (req as any).user = { username: u.username };
+    }
+  } catch {}
+  next();
+});
 app.use(cors({
   origin: WEB_ORIGIN,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 600,
 }));
 
 app.options('*', cors());
