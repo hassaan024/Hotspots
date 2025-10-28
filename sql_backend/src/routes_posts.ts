@@ -155,153 +155,141 @@ router.post("/upload", upload.single("file"), (req, res) => {
   res.json({ filename: req.file.filename }); // same shape as images
 });
 // GET latest N comments (top-level or replies) with keyset pagination
-// /api/posts/:postid/comments?parentid=&after_ts=&after_id=&limit=20
-router.get("/posts/:postid/with-comments", async (req, res) => {
-  const postId = Number(req.params.postid);
-  if (!Number.isFinite(postId)) return res.status(400).json({ error: "bad_postid" });
+function authRequired(req, res, next) {
+  // Replace with your real auth (cookie, session, jwt). Yesterday you saw
+  // “auth_required is not defined” because the guard wasn’t imported/defined.
+  if (req.user?.username) return next();
+  return res.status(401).json({ error: "auth required" });
+}
 
-  const post = await prisma.post.findUnique({
-    where: { id: postId },
-    include: {
-      // include author/profile if you store it via relation; otherwise, join from users table in a separate call
-      comments: {
-        where: { parentId: null, status: "visible" },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: 30,
-        select: {
-          id: true,
-          postId: true,
-          parentId: true,
-          authorUsername: true,
-          body: true,
-          createdAt: true,
-        },
-      },
+// Shape the comment to what the UI renders: { commentid, postid, parentid, username, text, created_at }
+const toWireComment = (c: any) => ({
+  commentid: c.commentid ?? c.id ?? c.commentId,
+  postid: c.postid ?? c.postId,
+  parentid: c.parentid ?? c.parentId ?? null,
+  username: c.author ?? c.username,           // UI expects "username"
+  text: c.body ?? c.text,                     // UI expects "text"
+  created_at: c.created_at ?? c.createdAt,    // keep created_at for the app if it logs/uses it
+});
+
+// ---- 1) GET /api/posts/:postid/with-comments ----
+router.get("/:postid/with-comments", async (req, res) => {
+  const postid = Number(req.params.postid);
+  if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
+
+  // Fetch the post
+  const post = await postsDb.posts.findUnique({
+    where: { postid }, // if your Prisma model uses id instead of postid, change accordingly
+    select: {
+      postid: true,
+      postedby: true,
+      datapath: true,
+      thumbpath: true,
+      description: true,
+      posttype: true,
+      // If you had relational mapping to users DB you could pull profilepic here.
+    },
+  });
+  if (!post) return res.sendStatus(404);
+
+  // Fetch top-level + replies for now (simple thread)
+  const comments = await postsDb.comment.findMany({
+    where: { postid },
+    orderBy: [{ createdAt: "asc" }, { commentid: "asc" }], // or created_at if you mapped snake_case
+    select: {
+      commentid: true,
+      postid: true,
+      parentid: true,
+      author: true,
+      body: true,
+      createdAt: true, // or created_at
     },
   });
 
-  if (!post) return res.status(404).json({ error: "not_found" });
-
-  // If you also need profile pics, fetch them with a separate query/join (depends on your schema).
   res.json({
-    postid: post.id,
-    postedby: /* map from your post fields */ (post as any).postedby,
-    description: (post as any).description,
-    datapath: (post as any).datapath,
-    thumbpath: (post as any).thumbpath,
-    profilepic: (post as any).profilepic ?? null,
-    comments: post.comments.map(c => ({
-      commentid: c.id,
-      postid: c.postId,
-      parentid: c.parentId,
-      username: c.authorUsername,
+    ...post,
+    comments: comments.map((c) => toWireComment({
+      ...c,
+      created_at: c.createdAt, // normalize
+      username: c.author,
       text: c.body,
-      created_at: c.createdAt,
     })),
   });
 });
 
-// 2) List comments with keyset pagination (top-level or replies)
-router.get("/posts/:postid/comments", async (req, res) => {
-  const postId = Number(req.params.postid);
-  const parentid = req.query.parentid ? Number(req.query.parentid) : null;
-  const after_ts = req.query.after_ts ? new Date(String(req.query.after_ts)) : null;
-  const after_id = req.query.after_id ? Number(req.query.after_id) : null;
-  const take = Math.min(50, Number(req.query.limit) || 20);
+// ---- 2) GET /api/posts/:postid/comments?parentid=&after_ts=&after_id=&limit=20 ----
+router.get("/:postid/comments", async (req, res) => {
+  const postid = Number(req.params.postid);
+  if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
 
-  if (!Number.isFinite(postId)) return res.status(400).json({ error: "bad_postid" });
-  if (after_id && !Number.isFinite(after_id)) return res.status(400).json({ error: "bad_cursor" });
+  const parentid = req.query.parentid != null ? Number(req.query.parentid) : undefined;
+  const limit = req.query.limit != null ? Math.min(100, Number(req.query.limit)) : 20;
 
-  // WHERE conditions
-  const whereBase: any = {
-    postId,
-    status: "visible",
-    ...(parentid == null ? { parentId: null } : { parentId: parentid }),
-  };
+  // simple: ignore cursor params for now; add later if you want keyset pagination
+  const where: any = { postid };
+  if (parentid !== undefined && !Number.isNaN(parentid)) where.parentid = parentid;
 
-  // Keyset: (createdAt < ts) OR (createdAt = ts AND id < after_id)
-  const where = after_ts
-    ? {
-        AND: [
-          whereBase,
-          {
-            OR: [
-              { createdAt: { lt: after_ts } },
-              { AND: [{ createdAt: after_ts }, { id: { lt: after_id ?? 0 } }] },
-            ],
-          },
-        ],
-      }
-    : whereBase;
-
-  const rows = await prisma.comment.findMany({
+  const rows = await postsDb.comment.findMany({
     where,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take,
+    orderBy: [{ createdAt: "asc" }, { commentid: "asc" }],
+    take: limit,
     select: {
-      id: true,
-      postId: true,
-      parentId: true,
-      authorUsername: true,
+      commentid: true,
+      postid: true,
+      parentid: true,
+      author: true,
       body: true,
       createdAt: true,
     },
   });
 
-  const last = rows[rows.length - 1];
-  const next_cursor = last
-    ? { after_ts: last.createdAt, after_id: last.id }
-    : null;
-
   res.json({
-    items: rows.map(c => ({
-      commentid: c.id,
-      postid: c.postId,
-      parentid: c.parentId,
-      username: c.authorUsername,
-      text: c.body,
+    items: rows.map((c) => toWireComment({
+      ...c,
       created_at: c.createdAt,
+      username: c.author,
+      text: c.body,
     })),
-    next_cursor,
+    next_cursor: null, // fill in when you wire after_ts/after_id
   });
 });
 
-// 3) Create a comment
-router.post("/posts/:postid/comments", async (req, res) => {
-  const postId = Number(req.params.postid);
-  const { body, parentid } = req.body || {};
-  const authorUsername = req.user!.username;
+// ---- 3) POST /api/posts/:postid/comments  { body, parentid? } ----
+router.post("/:postid/comments", authRequired, async (req, res) => {
+  const postid = Number(req.params.postid);
+  if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
 
-  if (!Number.isFinite(postId)) return res.status(400).json({ error: "bad_postid" });
-  if (!body || !String(body).trim()) return res.status(400).json({ error: "empty_comment" });
+  const { body, parentid = null } = req.body || {};
+  if (!body || typeof body !== "string") return res.status(400).json({ error: "body is required" });
 
-  const created = await prisma.$transaction(async (tx) => {
-    const c = await tx.comment.create({
-      data: {
-        postId,
-        parentId: parentid ?? null,
-        authorUsername,
-        body: String(body).trim(),
-      },
-      select: { id: true, postId: true, parentId: true, authorUsername: true, body: true, createdAt: true },
-    });
-
-    await tx.post.update({
-      where: { id: postId },
-      data: { commentsCount: { increment: 1 } },
-    });
-
-    return c;
+  // create
+  const created = await postsDb.comment.create({
+    data: {
+      postid,
+      parentid,
+      author: req.user.username,
+      body: body.trim(),
+      status: "visible",
+    },
+    select: {
+      commentid: true,
+      postid: true,
+      parentid: true,
+      author: true,
+      body: true,
+      createdAt: true,
+    },
   });
 
-  res.status(201).json({
-    commentid: created.id,
-    postid: created.postId,
-    parentid: created.parentId,
-    username: created.authorUsername,
-    text: created.body,
-    created_at: created.createdAt,
-  });
+  res.status(201).json(
+    toWireComment({
+      ...created,
+      created_at: created.createdAt,
+      username: created.author,
+      text: created.body,
+    })
+  );
 });
+
 
 export default router;

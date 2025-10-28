@@ -246,7 +246,9 @@ export async function addComment(postid, { body, parentid = null }) {
 
 // Convenience for your detail screen
 export async function getPostWithComments(postid) {
-  const r = await fetch(`${API_BASE}/api/posts/${postid}/with-comments`, { credentials: "include" });
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/with-comments`, {
+    credentials: "include",
+  });
   if (!r.ok) throw new Error(`post w/ comments failed: ${r.status}`);
-  return r.json(); // { ...post, comments:[...] }
+  return r.json();
 }

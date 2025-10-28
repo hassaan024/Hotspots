@@ -1930,21 +1930,21 @@ export namespace Prisma {
   }
 
   export type CommentAvgAggregateOutputType = {
-    commentId: number | null
-    postId: number | null
-    parentId: number | null
+    commentid: number | null
+    postid: number | null
+    parentid: number | null
   }
 
   export type CommentSumAggregateOutputType = {
-    commentId: number | null
-    postId: number | null
-    parentId: number | null
+    commentid: number | null
+    postid: number | null
+    parentid: number | null
   }
 
   export type CommentMinAggregateOutputType = {
-    commentId: number | null
-    postId: number | null
-    parentId: number | null
+    commentid: number | null
+    postid: number | null
+    parentid: number | null
     author: string | null
     body: string | null
     status: $Enums.CommentStatus | null
@@ -1953,9 +1953,9 @@ export namespace Prisma {
   }
 
   export type CommentMaxAggregateOutputType = {
-    commentId: number | null
-    postId: number | null
-    parentId: number | null
+    commentid: number | null
+    postid: number | null
+    parentid: number | null
     author: string | null
     body: string | null
     status: $Enums.CommentStatus | null
@@ -1964,9 +1964,9 @@ export namespace Prisma {
   }
 
   export type CommentCountAggregateOutputType = {
-    commentId: number
-    postId: number
-    parentId: number
+    commentid: number
+    postid: number
+    parentid: number
     author: number
     body: number
     status: number
@@ -1977,21 +1977,21 @@ export namespace Prisma {
 
 
   export type CommentAvgAggregateInputType = {
-    commentId?: true
-    postId?: true
-    parentId?: true
+    commentid?: true
+    postid?: true
+    parentid?: true
   }
 
   export type CommentSumAggregateInputType = {
-    commentId?: true
-    postId?: true
-    parentId?: true
+    commentid?: true
+    postid?: true
+    parentid?: true
   }
 
   export type CommentMinAggregateInputType = {
-    commentId?: true
-    postId?: true
-    parentId?: true
+    commentid?: true
+    postid?: true
+    parentid?: true
     author?: true
     body?: true
     status?: true
@@ -2000,9 +2000,9 @@ export namespace Prisma {
   }
 
   export type CommentMaxAggregateInputType = {
-    commentId?: true
-    postId?: true
-    parentId?: true
+    commentid?: true
+    postid?: true
+    parentid?: true
     author?: true
     body?: true
     status?: true
@@ -2011,9 +2011,9 @@ export namespace Prisma {
   }
 
   export type CommentCountAggregateInputType = {
-    commentId?: true
-    postId?: true
-    parentId?: true
+    commentid?: true
+    postid?: true
+    parentid?: true
     author?: true
     body?: true
     status?: true
@@ -2109,9 +2109,9 @@ export namespace Prisma {
   }
 
   export type CommentGroupByOutputType = {
-    commentId: number
-    postId: number
-    parentId: number | null
+    commentid: number
+    postid: number
+    parentid: number | null
     author: string
     body: string
     status: $Enums.CommentStatus
@@ -2139,9 +2139,9 @@ export namespace Prisma {
 
 
   export type CommentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    commentId?: boolean
-    postId?: boolean
-    parentId?: boolean
+    commentid?: boolean
+    postid?: boolean
+    parentid?: boolean
     author?: boolean
     body?: boolean
     status?: boolean
@@ -2151,9 +2151,9 @@ export namespace Prisma {
 
 
   export type CommentSelectScalar = {
-    commentId?: boolean
-    postId?: boolean
-    parentId?: boolean
+    commentid?: boolean
+    postid?: boolean
+    parentid?: boolean
     author?: boolean
     body?: boolean
     status?: boolean
@@ -2166,9 +2166,9 @@ export namespace Prisma {
     name: "Comment"
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
-      commentId: number
-      postId: number
-      parentId: number | null
+      commentid: number
+      postid: number
+      parentid: number | null
       author: string
       body: string
       status: $Enums.CommentStatus
@@ -2257,8 +2257,8 @@ export namespace Prisma {
      * // Get first 10 Comments
      * const comments = await prisma.comment.findMany({ take: 10 })
      * 
-     * // Only select the `commentId`
-     * const commentWithCommentIdOnly = await prisma.comment.findMany({ select: { commentId: true } })
+     * // Only select the `commentid`
+     * const commentWithCommentidOnly = await prisma.comment.findMany({ select: { commentid: true } })
      * 
      */
     findMany<T extends CommentFindManyArgs>(args?: SelectSubset<T, CommentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany">>
@@ -2543,9 +2543,9 @@ export namespace Prisma {
    * Fields of the Comment model
    */ 
   interface CommentFieldRefs {
-    readonly commentId: FieldRef<"Comment", 'Int'>
-    readonly postId: FieldRef<"Comment", 'Int'>
-    readonly parentId: FieldRef<"Comment", 'Int'>
+    readonly commentid: FieldRef<"Comment", 'Int'>
+    readonly postid: FieldRef<"Comment", 'Int'>
+    readonly parentid: FieldRef<"Comment", 'Int'>
     readonly author: FieldRef<"Comment", 'String'>
     readonly body: FieldRef<"Comment", 'String'>
     readonly status: FieldRef<"Comment", 'CommentStatus'>
@@ -3696,9 +3696,9 @@ export namespace Prisma {
 
 
   export const CommentScalarFieldEnum: {
-    commentId: 'commentId',
-    postId: 'postId',
-    parentId: 'parentId',
+    commentid: 'commentid',
+    postid: 'postid',
+    parentid: 'parentid',
     author: 'author',
     body: 'body',
     status: 'status',
@@ -3845,9 +3845,9 @@ export namespace Prisma {
     AND?: CommentWhereInput | CommentWhereInput[]
     OR?: CommentWhereInput[]
     NOT?: CommentWhereInput | CommentWhereInput[]
-    commentId?: IntFilter<"Comment"> | number
-    postId?: IntFilter<"Comment"> | number
-    parentId?: IntNullableFilter<"Comment"> | number | null
+    commentid?: IntFilter<"Comment"> | number
+    postid?: IntFilter<"Comment"> | number
+    parentid?: IntNullableFilter<"Comment"> | number | null
     author?: StringFilter<"Comment"> | string
     body?: StringFilter<"Comment"> | string
     status?: EnumCommentStatusFilter<"Comment"> | $Enums.CommentStatus
@@ -3856,9 +3856,9 @@ export namespace Prisma {
   }
 
   export type CommentOrderByWithRelationInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrderInput | SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrderInput | SortOrder
     author?: SortOrder
     body?: SortOrder
     status?: SortOrder
@@ -3867,23 +3867,23 @@ export namespace Prisma {
   }
 
   export type CommentWhereUniqueInput = Prisma.AtLeast<{
-    commentId?: number
+    commentid?: number
     AND?: CommentWhereInput | CommentWhereInput[]
     OR?: CommentWhereInput[]
     NOT?: CommentWhereInput | CommentWhereInput[]
-    postId?: IntFilter<"Comment"> | number
-    parentId?: IntNullableFilter<"Comment"> | number | null
+    postid?: IntFilter<"Comment"> | number
+    parentid?: IntNullableFilter<"Comment"> | number | null
     author?: StringFilter<"Comment"> | string
     body?: StringFilter<"Comment"> | string
     status?: EnumCommentStatusFilter<"Comment"> | $Enums.CommentStatus
     createdAt?: DateTimeFilter<"Comment"> | Date | string
     updatedAt?: DateTimeFilter<"Comment"> | Date | string
-  }, "commentId">
+  }, "commentid">
 
   export type CommentOrderByWithAggregationInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrderInput | SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrderInput | SortOrder
     author?: SortOrder
     body?: SortOrder
     status?: SortOrder
@@ -3900,9 +3900,9 @@ export namespace Prisma {
     AND?: CommentScalarWhereWithAggregatesInput | CommentScalarWhereWithAggregatesInput[]
     OR?: CommentScalarWhereWithAggregatesInput[]
     NOT?: CommentScalarWhereWithAggregatesInput | CommentScalarWhereWithAggregatesInput[]
-    commentId?: IntWithAggregatesFilter<"Comment"> | number
-    postId?: IntWithAggregatesFilter<"Comment"> | number
-    parentId?: IntNullableWithAggregatesFilter<"Comment"> | number | null
+    commentid?: IntWithAggregatesFilter<"Comment"> | number
+    postid?: IntWithAggregatesFilter<"Comment"> | number
+    parentid?: IntNullableWithAggregatesFilter<"Comment"> | number | null
     author?: StringWithAggregatesFilter<"Comment"> | string
     body?: StringWithAggregatesFilter<"Comment"> | string
     status?: EnumCommentStatusWithAggregatesFilter<"Comment"> | $Enums.CommentStatus
@@ -4022,9 +4022,9 @@ export namespace Prisma {
   }
 
   export type CommentCreateInput = {
-    commentId: number
-    postId: number
-    parentId?: number | null
+    commentid: number
+    postid: number
+    parentid?: number | null
     author: string
     body: string
     status?: $Enums.CommentStatus
@@ -4033,9 +4033,9 @@ export namespace Prisma {
   }
 
   export type CommentUncheckedCreateInput = {
-    commentId: number
-    postId: number
-    parentId?: number | null
+    commentid: number
+    postid: number
+    parentid?: number | null
     author: string
     body: string
     status?: $Enums.CommentStatus
@@ -4044,9 +4044,9 @@ export namespace Prisma {
   }
 
   export type CommentUpdateInput = {
-    commentId?: IntFieldUpdateOperationsInput | number
-    postId?: IntFieldUpdateOperationsInput | number
-    parentId?: NullableIntFieldUpdateOperationsInput | number | null
+    commentid?: IntFieldUpdateOperationsInput | number
+    postid?: IntFieldUpdateOperationsInput | number
+    parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string
     body?: StringFieldUpdateOperationsInput | string
     status?: EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
@@ -4055,9 +4055,9 @@ export namespace Prisma {
   }
 
   export type CommentUncheckedUpdateInput = {
-    commentId?: IntFieldUpdateOperationsInput | number
-    postId?: IntFieldUpdateOperationsInput | number
-    parentId?: NullableIntFieldUpdateOperationsInput | number | null
+    commentid?: IntFieldUpdateOperationsInput | number
+    postid?: IntFieldUpdateOperationsInput | number
+    parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string
     body?: StringFieldUpdateOperationsInput | string
     status?: EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
@@ -4066,9 +4066,9 @@ export namespace Prisma {
   }
 
   export type CommentCreateManyInput = {
-    commentId: number
-    postId: number
-    parentId?: number | null
+    commentid: number
+    postid: number
+    parentid?: number | null
     author: string
     body: string
     status?: $Enums.CommentStatus
@@ -4077,9 +4077,9 @@ export namespace Prisma {
   }
 
   export type CommentUpdateManyMutationInput = {
-    commentId?: IntFieldUpdateOperationsInput | number
-    postId?: IntFieldUpdateOperationsInput | number
-    parentId?: NullableIntFieldUpdateOperationsInput | number | null
+    commentid?: IntFieldUpdateOperationsInput | number
+    postid?: IntFieldUpdateOperationsInput | number
+    parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string
     body?: StringFieldUpdateOperationsInput | string
     status?: EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
@@ -4088,9 +4088,9 @@ export namespace Prisma {
   }
 
   export type CommentUncheckedUpdateManyInput = {
-    commentId?: IntFieldUpdateOperationsInput | number
-    postId?: IntFieldUpdateOperationsInput | number
-    parentId?: NullableIntFieldUpdateOperationsInput | number | null
+    commentid?: IntFieldUpdateOperationsInput | number
+    postid?: IntFieldUpdateOperationsInput | number
+    parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string
     body?: StringFieldUpdateOperationsInput | string
     status?: EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
@@ -4322,9 +4322,9 @@ export namespace Prisma {
   }
 
   export type CommentCountOrderByAggregateInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrder
     author?: SortOrder
     body?: SortOrder
     status?: SortOrder
@@ -4333,15 +4333,15 @@ export namespace Prisma {
   }
 
   export type CommentAvgOrderByAggregateInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrder
   }
 
   export type CommentMaxOrderByAggregateInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrder
     author?: SortOrder
     body?: SortOrder
     status?: SortOrder
@@ -4350,9 +4350,9 @@ export namespace Prisma {
   }
 
   export type CommentMinOrderByAggregateInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrder
     author?: SortOrder
     body?: SortOrder
     status?: SortOrder
@@ -4361,9 +4361,9 @@ export namespace Prisma {
   }
 
   export type CommentSumOrderByAggregateInput = {
-    commentId?: SortOrder
-    postId?: SortOrder
-    parentId?: SortOrder
+    commentid?: SortOrder
+    postid?: SortOrder
+    parentid?: SortOrder
   }
 
   export type EnumCommentStatusWithAggregatesFilter<$PrismaModel = never> = {

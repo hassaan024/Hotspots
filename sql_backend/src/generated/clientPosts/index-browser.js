@@ -133,9 +133,9 @@ exports.Prisma.PostsScalarFieldEnum = {
 };
 
 exports.Prisma.CommentScalarFieldEnum = {
-  commentId: 'commentId',
-  postId: 'postId',
-  parentId: 'parentId',
+  commentid: 'commentid',
+  postid: 'postid',
+  parentid: 'parentid',
   author: 'author',
   body: 'body',
   status: 'status',

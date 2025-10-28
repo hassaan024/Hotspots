@@ -25,17 +25,16 @@ model posts {
   @@index([postedby], map: "posts_users_username_fk")
 }
 model Comment {
-  commentId            Int @id
-  postId          Int
-  parentId        Int?
+  commentid Int     @id      @map("commentid")
+  postid    Int     @map("postid")
+  parentid  Int?    @map("parentid")
+  author    String  @map("author")
+  body      String  @map("body")
+  status    CommentStatus @default(visible) @map("status")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
 
-  author          String
-
-  body            String
-  status          CommentStatus  @default(visible)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
+  @@map("comments") // table name
 }
 
 model CommentLike {
