@@ -7,21 +7,37 @@ import multer from "multer";
 import fs from "node:fs";
 import path from "node:path";
 
-
+import cookieParser from "cookie-parser";
 import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
 import cors from 'cors';
-
+import jwt from "jsonwebtoken";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const WEB_ORIGIN = 'http://localhost:8081';
 const app = express();
-
 app.use(cors({
-  origin: WEB_ORIGIN,
+  origin: ["http://25.3.215.148:8081", "http://localhost:8081","http://localhost:8082" ],
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 600,
 }));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+app.use(cookieParser());
+app.use((req, _res, next) => {
+  const h = req.header("authorization");
+  if (h?.startsWith("Bearer ")) {
+    try {
+      const payload = jwt.verify(h.slice(7), JWT_SECRET) as any;
+      if (payload?.sub) (req as any).user = { username: String(payload.sub) };
+    } catch { /* ignore bad/expired token */ }
+  }
+  next();
+});
+
 
 app.options('*', cors());
 
@@ -37,11 +53,13 @@ app.use((req, res, next) => {
   };
   next();
 });
-
+app.get("/api/whoami", (req, res) => {
+  res.json({ user: (req as any).user ?? null });
+});
 app.use(helmet());
 
 
-app.use(express.json());
+
 
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 120 });
 

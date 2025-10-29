@@ -293,6 +293,7 @@ export default function MapPage() {
 
   useEffect(() => {
     let cancelled = false;
+    injectNoControlsCSS();
 
     (async () => {
       try {
@@ -546,8 +547,13 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
   }, []);
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.screenTitle}>Map</Text>
+    <>
+    <View style={styles.titleRow}>
+      <View style={styles.titleBubble}>
+        <Text style={styles.title}>Maps</Text>
+      </View>
+    </View>
+    <View style={styles.screenMap}>
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
       ) : (
@@ -598,7 +604,6 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                       key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
                       src={toImageUri(selectedPost.datapath)}
                       poster={toImageUri(selectedPost.thumbpath)}
-                      controls
                       playsInline
                       autoPlay
                       muted={!HOTSPOTS_AUDIO_UNLOCKED}
@@ -811,5 +816,6 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
         </Modal>
       )}
     </View>
+    </>
   );
 }

@@ -49,6 +49,7 @@ return JSON.parse(text);
     const text = await r.text().catch(() => "");
     throw new Error(text || `Login failed: ${r.status}`);
   }
+
   return r.json();
 }
 
@@ -212,6 +213,42 @@ export async function uploadImage(mediaUri, meta = {}) {
     }
     throw e;
   }
+
 }
 
 
+// --- Comments API ---
+export async function listComments(postid, { parentid = null, after_ts = null, after_id = null, limit = 20 } = {}) {
+  const qs = new URLSearchParams();
+  if (parentid != null) qs.set("parentid", String(parentid));
+  if (after_ts) qs.set("after_ts", after_ts);
+  if (after_id) qs.set("after_id", String(after_id));
+  if (limit) qs.set("limit", String(limit));
+
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments?${qs.toString()}`, { credentials: "include" });
+  if (!r.ok) throw new Error(`comments failed: ${r.status}`);
+  return r.json(); // { items: [...], next_cursor: { after_ts, after_id } | null }
+}
+
+export async function addComment(postid, { body, parentid = null }) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body, parentid }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => "");
+    throw new Error(`create comment failed: ${r.status} ${t}`);
+  }
+  return r.json(); // created comment
+}
+
+// Convenience for your detail screen
+export async function getPostWithComments(postid) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/with-comments`, {
+    credentials: "include",
+  });
+  if (!r.ok) throw new Error(`post w/ comments failed: ${r.status}`);
+  return r.json();
+}

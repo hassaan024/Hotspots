@@ -8,14 +8,41 @@ datasource db {
   url      = env("DATABASE_URL_POSTS")
 }
 
+enum CommentStatus {
+  visible
+  deleted
+  hidden
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model posts {
-  postid     Int     @id @default(autoincrement())
-  postedby   String  @db.VarChar(25)
-  posttype   Int
-  datapath   String  @db.VarChar(255)
-  location   String? @db.VarChar(50)
-  visibility Int?    @default(2)
+  postid      Int     @id @default(autoincrement())
+  postedby    String  @db.VarChar(25)
+  posttype    Int
+  datapath    String  @db.VarChar(255)
+  location    String? @db.VarChar(50)
+  visibility  Int?    @default(2)
+  thumbpath   String? @db.VarChar(255)
+  description String? @db.VarChar(255)
 
   @@index([postedby], map: "posts_users_username_fk")
+}
+
+model Comment {
+  commentid Int           @id @map("commentid")
+  postid    Int           @map("postid")
+  parentid  Int?          @map("parentid")
+  author    String        @map("author")
+  body      String        @map("body")
+  status    CommentStatus @default(visible) @map("status")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@map("comments") // table name
+}
+
+model CommentLike {
+  commentId Int      @id
+  username  String
+  createdAt DateTime @default(now())
 }
