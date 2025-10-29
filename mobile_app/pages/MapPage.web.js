@@ -43,6 +43,24 @@ function pickPreviewAsset(p) {
   return dp || null;   // image => use image path
 }
 
+// Helper: pick the most recent post from a group of items
+function pickMostRecent(items = []) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const keyCandidates = ["created_at", "createdAt", "timestamp", "time", "postid", "id"];
+  const hasKey = (obj, k) => Object.prototype.hasOwnProperty.call(obj || {}, k);
+  let key = keyCandidates.find((k) => hasKey(items[0], k));
+  if (!key) key = "postid";
+  const getVal = (x) => {
+    const v = x?.[key];
+    if (v == null) return -Infinity;
+    const n = Number(v);
+    if (!Number.isNaN(n)) return n;
+    const t = Date.parse(String(v));
+    return Number.isNaN(t) ? -Infinity : t;
+  };
+  return items.slice().sort((a, b) => getVal(b) - getVal(a))[0] || items[0];
+}
+
 function haversineMeters(lat1, lng1, lat2, lng2) {
   const toRad = (d) => (d * Math.PI) / 180;
   const R = 6371000;
@@ -53,6 +71,31 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function groupPointsByRadius(points, radiusM = 25) {
+  const groups = [];
+  for (const p of points) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+    let placed = false;
+    for (const g of groups) {
+      // quick proximity check to the group's representative center
+      const d = haversineMeters(g.lat, g.lng, p.lat, p.lng);
+      if (d <= radiusM) {
+        g.items.push(p);
+        // update centroid
+        const n = g.items.length;
+        g.lat = g.items.reduce((acc, it) => acc + it.lat, 0) / n;
+        g.lng = g.items.reduce((acc, it) => acc + it.lng, 0) / n;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      groups.push({ lat: p.lat, lng: p.lng, items: [p] });
+    }
+  }
+  return groups;
 }
 
 /* function loadGoogle() {
@@ -87,14 +130,56 @@ function injectNoControlsCSS() {
   document.head.appendChild(style);
 }
 
+// --- One-time audio unlock for web autoplay with sound ---
+let AUDIO_ENABLED = false;
+
+function installAudioUnlockOnce() {
+  if (AUDIO_ENABLED) return;
+
+  const unlock = () => {
+    AUDIO_ENABLED = true;
+    // Unmute any already rendered videos and try to play them
+    const vids = document.querySelectorAll('video[data-hotspots-video]');
+    vids.forEach((v) => {
+      try {
+        v.muted = false;
+        const p = v.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {}
+    });
+    window.removeEventListener("pointerdown", unlock, true);
+    window.removeEventListener("keydown", unlock, true);
+  };
+
+  window.addEventListener("pointerdown", unlock, true);
+  window.addEventListener("keydown", unlock, true);
+}
+// --- end audio unlock ---
+
 export default function MapPage() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const heatmapRef = useRef(null);
   const markersRef = useRef([]);
+  const galleryRef = useRef(null);
+  const idleListenerRef = useRef(null);
   const [error, setError] = useState(null);
   const [loadingMaps, setLoadingMaps] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupIndex, setGroupIndex] = useState(0);
+
+  useEffect(() => {
+    installAudioUnlockOnce();
+  }, []);
+
+  useEffect(() => {
+    if (selectedGroup && galleryRef.current) {
+      // reset to the first slide when opening
+      try { galleryRef.current.scrollLeft = 0; } catch {}
+      setGroupIndex(0);
+    }
+  }, [selectedGroup]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +196,9 @@ export default function MapPage() {
         const points = await listLocations(); // [{ id, postedby, lat, lng, datapath }]
 
         await loadGoogleMaps();
+        if (!window.google || !google.maps) {
+          throw new Error("Google Maps failed to initialize");
+        }
         if (cancelled || !mapRef.current) return;
         // hide loading screen as soon as Google Maps JS is ready
         setLoadingMaps(false);
@@ -131,7 +219,11 @@ export default function MapPage() {
           throw new Error("Google Maps libraries not ready");
         }
 
-        const { ColorScheme } = await google.maps.importLibrary("core");
+        let ColorScheme = undefined;
+        try {
+          const core = await google.maps.importLibrary("core");
+          ColorScheme = core?.ColorScheme;
+        } catch {}
         const map = new Map(mapRef.current, {
           center: Uluru,
           zoom: 6,
@@ -141,7 +233,7 @@ export default function MapPage() {
           zoomControl: true,
           fullscreenControl: false,
           mapTypeControl: false,
-          colorScheme: ColorScheme.DARK,
+          colorScheme: ColorScheme ? ColorScheme.DARK : undefined,
         });
 
         mapInstanceRef.current = map;
@@ -155,12 +247,19 @@ export default function MapPage() {
           const viz = await google.maps.importLibrary("visualization");
           HeatmapLayer = viz.HeatmapLayer;
         }
+        if (!HeatmapLayer && google.maps.visualization) {
+          HeatmapLayer = google.maps.visualization.HeatmapLayer;
+        }
         if (!HeatmapLayer) throw new Error("Heatmap library not available");
 
-        // convert  points into LatLng
-        const heatData = points
-          .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-          .map((p) => new google.maps.LatLng(p.lat, p.lng));
+        // group points first so heatmap reflects combined posts at same spot
+        const groups = groupPointsByRadius(points, 25);
+
+        // build weighted heatmap data, weight is number of posts in the group
+        const heatData = groups.map((g) => ({
+          location: new google.maps.LatLng(g.lat, g.lng),
+          weight: g.items.length,
+        }));
 
         // custom gradient that reads well on dark maps
         const gradient = [
@@ -221,75 +320,78 @@ export default function MapPage() {
           );
         }
 
-        // Create image-backed markers using AdvancedMarkerElement content
-        const placeholder = `data:image/svg+xml;utf8,${encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="48"><rect width="100%" height="100%" rx="0" ry="0" fill="#222"/><text x="50%" y="56%" fill="#ffd166" font-size="18" text-anchor="middle" font-family="Inter, Arial">H</text></svg>'
-        )}`;
+        // Group points before making markers (already computed as `groups` above)
+        const markers = groups.map((g) => {
+          const recent = pickMostRecent(g.items) || {};
+          const preview = pickPreviewAsset(recent);
+          const url = toImageUri(preview);
+          const img = document.createElement("div");
+          img.style.position = "relative";
+          img.style.width = "38px";
+          img.style.height = "54px";
+          img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
+          img.style.borderRadius = "4px";
+          img.style.overflow = "hidden";
+          const inner = document.createElement("img");
+          inner.src = url || `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="38" height="54"><rect width="100%" height="100%" fill="#222"/></svg>')}`;
+          inner.alt = recent.postedby ? `@${recent.postedby}` : "post";
+          inner.style.width = "100%";
+          inner.style.height = "100%";
+          inner.style.objectFit = "cover";
+          img.appendChild(inner);
+          if (g.items.length > 1) {
+            const badge = document.createElement("div");
+            badge.textContent = String(g.items.length);
+            badge.style.position = "absolute";
+            badge.style.right = "4px";
+            badge.style.top = "4px";
+            badge.style.background = "rgba(0,0,0,0.7)";
+            badge.style.color = "#fff";
+            badge.style.fontSize = "12px";
+            badge.style.padding = "2px 6px";
+            badge.style.borderRadius = "12px";
+            badge.style.lineHeight = "1";
+            img.appendChild(badge);
+          }
+          const mk = new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position: { lat: g.lat, lng: g.lng },
+            content: img,
+            title: g.items.length > 1 ? `${g.items.length} posts here` : `@${recent.postedby || ""}`,
+          });
+          mk.__hotspotsEl = img;
+          const open = () => {
+            if (g.items.length > 1) {
+              setSelectedGroup(g.items);
+              setGroupIndex(0);
+            } else if (g.items.length === 1) {
+              setSelectedPost(recent);
+            }
+          };
+          if (mk.addListener) mk.addListener("gmp-click", open);
+          img.addEventListener("click", open);
+          return mk;
+        });
 
- const markers = points.map((p) => {
-   const img = document.createElement("img");
-   const preview = pickPreviewAsset(p); // thumb for video; datapath for image
-   const url = toImageUri(preview);
- if (!url) {
-   console.warn("No preview URL for point", p);
- } else {
-   // Optional: test the URL in a new tab to confirm it loads
-   // console.log("Marker img URL:", url);
- }
-   img.src = url || placeholder;
-   img.alt = p.postedby ? `@${p.postedby}` : "post";
-   img.style.width = "32px";
-   img.style.height = "48px";
-   img.style.objectFit = "cover";
-   img.style.borderRadius = "0";
-   img.style.boxShadow = "0 0 0 2px #0b0b0f, 0 2px 6px rgba(0,0,0,.4)";
-   img.loading = "lazy";
-   // if the image fails (e.g., no thumb yet / wrong filename), show placeholder
-   img.onerror = () => { img.src = placeholder; };
-
-   const mk = new google.maps.marker.AdvancedMarkerElement({
-     map,
-     position: { lat: p.lat, lng: p.lng },
-     content: img,
-     title: `@${p.postedby}`,
-   });
-   // click to open the post modal
-   if (mk.addListener) {
-     mk.addListener("gmp-click", () => setSelectedPost(p));
-   }
-   // fallback: also allow clicking the image content
-   img.addEventListener("click", () => setSelectedPost(p));
-   return mk;
- });
-
-markersRef.current = markers;
+        markersRef.current = markers;
 
 const DLV_MAP = map; // use the in-scope map instance for visibility logic
 function updateLayerVisibility() {
   const b = DLV_MAP.getBounds();
   if (!b) return;
 
+  // filter to visible points first
   const visible = points.filter((p) =>
     Number.isFinite(p.lat) &&
     Number.isFinite(p.lng) &&
     b.contains(new google.maps.LatLng(p.lat, p.lng))
   );
 
-  let crowded = false;
-  for (let i = 0; i < visible.length && !crowded; i++) {
-    let count = 1;
-    const a = visible[i];
-    for (let j = i + 1; j < visible.length; j++) {
-      const d = haversineMeters(a.lat, a.lng, visible[j].lat, visible[j].lng);
-      if (d <= CLUSTER_RADIUS_M) {
-        count++;
-        if (count >= DENSITY_THRESHOLD) {
-          crowded = true;
-          break;
-        }
-      }
-    }
-  }
+  // group the visible points using the same radius used elsewhere
+  const visibleGroups = groupPointsByRadius(visible, CLUSTER_RADIUS_M);
+
+  // determine if any group meets or exceeds the density threshold
+  let crowded = visibleGroups.some((g) => g.items.length >= DENSITY_THRESHOLD);
 
   const zoomLevel = DLV_MAP.getZoom() || 0;
   const hideMarkers = (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM) || zoomLevel < ZOOM_THRESHOLD;
@@ -297,13 +399,19 @@ function updateLayerVisibility() {
   if (heatmapRef.current) heatmapRef.current.setMap(hideMarkers ? DLV_MAP : null);
 
   if (markersRef.current && markersRef.current.length) {
-    for (const m of markersRef.current) m.setMap(hideMarkers ? null : DLV_MAP);
+    for (const m of markersRef.current) {
+      const el = m.__hotspotsEl || m.content;
+      if (el) el.style.display = hideMarkers ? "none" : "block";
+    }
   }
 }
 
 // initial apply and on viewport changes
 updateLayerVisibility();
-const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
+if (idleListenerRef.current) {
+  try { google.maps.event.removeListener(idleListenerRef.current); } catch {}
+}
+idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
 
       } catch (e) {
         console.error(e);
@@ -314,8 +422,9 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
     return () => {
       cancelled = true;
       try {
-        if (typeof idleListener !== "undefined" && idleListener) {
-          google.maps.event.removeListener(idleListener);
+        if (idleListenerRef.current) {
+          google.maps.event.removeListener(idleListenerRef.current);
+          idleListenerRef.current = null;
         }
       } catch {}
       if (heatmapRef.current) {
@@ -323,7 +432,13 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
         heatmapRef.current = null;
       }
       if (markersRef.current && markersRef.current.length) {
-        for (const m of markersRef.current) m.setMap(null);
+        for (const m of markersRef.current) {
+          try {
+            const el = m.__hotspotsEl || m.content;
+            if (el) el.style.display = "none";
+            m.setMap && m.setMap(null);
+          } catch {}
+        }
         markersRef.current = [];
       }
       if (mapInstanceRef.current) {
@@ -395,11 +510,37 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                       poster={toImageUri(selectedPost.thumbpath)}
                       playsInline
                       autoPlay
-                      muted
+                      muted={!AUDIO_ENABLED}
                       loop
+                      controls={false}
                       controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
                       disablePictureInPicture
                       onContextMenu={(e) => e.preventDefault()}
+                      data-hotspots-video
+                      onLoadedMetadata={(e) => {
+                        if (AUDIO_ENABLED) {
+                          try {
+                            e.currentTarget.muted = false;
+                            const p = e.currentTarget.play();
+                            if (p && typeof p.catch === "function") p.catch(() => {});
+                          } catch {}
+                        }
+                      }}
+                      onCanPlay={(e) => {
+                        try {
+                          if (AUDIO_ENABLED) e.currentTarget.muted = false;
+                          const p = e.currentTarget.play();
+                          if (p && typeof p.catch === "function") p.catch(() => {});
+                        } catch {}
+                      }}
+                      onClick={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = !v.muted;
+                        try {
+                          const p = v.play();
+                          if (p && typeof p.catch === "function") p.catch(() => {});
+                        } catch {}
+                      }}
                       style={{
                         width: "100%",
                         height: "auto",
@@ -429,6 +570,145 @@ const idleListener = DLV_MAP.addListener("idle", updateLayerVisibility);
                 </Text>
                 <Text style={[styles.text, { marginBottom: 8 }]}>
                   {String(selectedPost?.caption || "").trim() || "(no caption)"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
+      {selectedGroup && Array.isArray(selectedGroup) && (
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedGroup(null)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setSelectedGroup(null)}
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+              justifyContent: "center",
+              alignItems: "center",
+              paddingHorizontal: 16,
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={{
+                backgroundColor: "#000",
+                borderRadius: 12,
+                padding: 20,
+                width: "92%",
+                maxWidth: 440,
+                alignItems: "stretch",
+              }}
+            >
+              <View style={styles.postWrapper}>
+                <View style={[styles.postBox, { paddingBottom: 0 }]}>
+                  <View
+                    style={{
+                      width: "100%",
+                      height: 520,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      ref={galleryRef}
+                      onScroll={(e) => {
+                        const el = e.currentTarget;
+                        const idx = Math.round(el.scrollLeft / el.clientWidth);
+                        if (idx !== groupIndex) setGroupIndex(idx);
+                      }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        width: "100%",
+                        height: "100%",
+                        overflowX: "auto",
+                        scrollSnapType: "x mandatory",
+                        WebkitOverflowScrolling: "touch",
+                        scrollBehavior: "smooth",
+                        gap: "0px",
+                      }}
+                      tabIndex={0}
+                    >
+                      {selectedGroup.map((it, idx) => {
+                        const isVid = Number(it?.posttype) === 1 || isVideoPath(String(it?.datapath || ""));
+                        const src = toImageUri(it.datapath);
+                        const poster = toImageUri(it.thumbpath);
+                        return (
+                          <div
+                            key={String(it.postid || it.id || idx)}
+                            style={{
+                              minWidth: "100%",
+                              height: "100%",
+                              scrollSnapAlign: "center",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "#000",
+                            }}
+                            onFocus={() => setGroupIndex(idx)}
+                          >
+                            {isVid ? (
+                              <video
+                                src={src}
+                                poster={poster}
+                                playsInline
+                                autoPlay
+                                muted={!AUDIO_ENABLED}
+                                loop
+                                controls={false}
+                                controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+                                disablePictureInPicture
+                                onContextMenu={(e) => e.preventDefault()}
+                                data-hotspots-video
+                                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                                onLoadedMetadata={(e) => {
+                                  if (AUDIO_ENABLED) {
+                                    try {
+                                      e.currentTarget.muted = false;
+                                      const p = e.currentTarget.play();
+                                      if (p && typeof p.catch === "function") p.catch(() => {});
+                                    } catch {}
+                                  }
+                                }}
+                                onCanPlay={(e) => {
+                                  try {
+                                    if (AUDIO_ENABLED) e.currentTarget.muted = false;
+                                    const p = e.currentTarget.play();
+                                    if (p && typeof p.catch === "function") p.catch(() => {});
+                                  } catch {}
+                                }}
+                                onClick={(e) => {
+                                  const v = e.currentTarget;
+                                  v.muted = !v.muted;
+                                  try {
+                                    const p = v.play();
+                                    if (p && typeof p.catch === "function") p.catch(() => {});
+                                  } catch {}
+                                }}
+                              />
+                            ) : (
+                              <Image
+                                source={{ uri: src }}
+                                style={{ width: "100%", height: "100%", resizeMode: "contain" }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </View>
+                </View>
+                <Text style={[styles.username, { marginTop: 12, marginBottom: 4 }]}>
+                  {selectedGroup[groupIndex]?.postedby || "Unknown"}
+                </Text>
+                <Text style={[styles.text, { marginBottom: 8 }]}>
+                  {String(selectedGroup[groupIndex]?.caption || "").trim() || "(no caption)"}
                 </Text>
               </View>
             </TouchableOpacity>
