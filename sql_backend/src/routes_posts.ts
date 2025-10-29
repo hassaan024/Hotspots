@@ -24,35 +24,39 @@ router.get("/", async (req, res, next) => {
     const rows = await postsDb.posts.findMany({
       where,
       orderBy: { postid: "desc" },
-      select: {
-        postid: true,
-        postedby: true,
-        datapath: true,
-        thumbpath: true,
-        description: true,
-        posttype: true,
-        location: true,
-        visibility: true,
-        createdAt: true,
-        _count: { select: { postLikes: true } }, // likeCount
-        ...(me && {
-          postLikes: { where: { username: me }, select: { username: true } }, // isLiked
-        }),
-      } as any,
+      include: {
+        _count: { select: { postLikes: true } },                    // likeCount
+        ...(me
+          ? { postLikes: { where: { username: me }, select: { username: true } } } // isLiked
+          : {}),
+      },
     });
 
     const posts = rows.map((r: any) => ({
-      ...r,
-      likeCount: r._count?.postLikes || 0,
-      isLiked: !!(r.postLikes && r.postLikes.length),
-      // drop helpers so payload is clean
-      _count: undefined,
-      postLikes: undefined,
+      // all scalar columns are present because we used `include`, not `select`
+      postid: r.postid,
+      postedby: r.postedby,
+      datapath: r.datapath,
+      thumbpath: r.thumbpath,
+      description: r.description,
+      posttype: r.posttype,
+      location: r.location,
+      visibility: r.visibility,
+      createdAt: r.createdAt,
+
+      likeCount: r._count?.postLikes ?? 0,
+      isLiked: Array.isArray(r.postLikes) && r.postLikes.length > 0,
+
+
     }));
 
     res.json(posts);
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error("GET /api/posts failed:", e);
+    next(e);
+  }
 });
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 router.get("/locations", async (req, res) => {
