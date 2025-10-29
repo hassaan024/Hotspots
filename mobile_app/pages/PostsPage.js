@@ -120,39 +120,62 @@ export default function PostsPage() {
   const [commentSending, setCommentSending] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await listPosts();
-      setPosts(data);
+const load = useCallback(async () => {
+  try {
+    const data = await listPosts();
+    setPosts(data);
 
-      const counts = {};
-      data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
-      setLikeCounts(counts);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+    // like counts
+    const counts = {};
+    data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
+    setLikeCounts(counts);
+
+    // liked state (from server if available)
+    const liked = {};
+    data.forEach((p) => (liked[p.postid] = !!p.isLiked));
+    setLikedPosts(liked);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useEffect(() => {
     injectNoControlsCSS();
     load();
   }, [load]);
 
-  const toggleLike = async (postid) => {
-    setLikedPosts((prev) => {
-      const already = !!prev[postid];
-      setLikeCounts((counts) => ({
-        ...counts,
-        [postid]: Math.max(0, (counts[postid] || 0) + (already ? -1 : 1)),
-      }));
-      return { ...prev, [postid]: !already };
-    });
-    const likedNow = !likedPosts[postid];
-    await updateLikeStatus(postid, likedNow).catch(() => {});
-  };
+const toggleLike = async (postid) => {
+  // compute next liked state
+  const prevLiked = !!likedPosts[postid];
+  const nextLiked = !prevLiked;
+
+  // optimistic update: likedPosts + likeCounts
+  setLikedPosts((prev) => ({ ...prev, [postid]: nextLiked }));
+  setLikeCounts((counts) => ({
+    ...counts,
+    [postid]: Math.max(0, (counts[postid] || 0) + (nextLiked ? 1 : -1)),
+  }));
+
+  try {
+    // tell the server what we want it to be
+    const res = await updateLikeStatus(postid, nextLiked);
+    // server responds with { postid, liked, likeCount }
+    setLikedPosts((prev) => ({ ...prev, [postid]: !!res.liked }));
+    setLikeCounts((counts) => ({ ...counts, [postid]: res.likeCount ?? (nextLiked ? (counts[postid] || 0) : Math.max(0, (counts[postid] || 1) - 1)) }));
+  } catch (err) {
+    console.error("like toggle failed:", err);
+    // rollback UI on error
+    setLikedPosts((prev) => ({ ...prev, [postid]: prevLiked }));
+    setLikeCounts((counts) => ({
+      ...counts,
+      [postid]: Math.max(0, (counts[postid] || 0) + (prevLiked ? 1 : -1)),
+    }));
+  }
+};
+
 
   const handleFollowToggle = (username) => {
     setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));

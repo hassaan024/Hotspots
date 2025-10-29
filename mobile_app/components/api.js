@@ -252,3 +252,31 @@ export async function getPostWithComments(postid) {
   if (!r.ok) throw new Error(`post w/ comments failed: ${r.status}`);
   return r.json();
 }
+// api.js
+export async function getPostLikeState(postid) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, { credentials: "include" });
+  if (!r.ok) throw new Error(`like state failed: ${r.status}`);
+  return r.json(); // { postid, liked, likeCount }
+}
+
+export async function updateLikeStatus(postid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    credentials: "include",
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`like toggle failed: ${r.status}`);
+  return r.json(); // { postid, liked, likeCount }
+}
+
+export async function updateCommentLikeStatus(postid, commentid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments/${commentid}/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    credentials: "include",
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`comment like toggle failed: ${r.status}`);
+  return r.json(); // { commentid, liked, likeCount }
+}

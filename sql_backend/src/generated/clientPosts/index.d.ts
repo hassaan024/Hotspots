@@ -28,6 +28,11 @@ export type Comment = $Result.DefaultSelection<Prisma.$CommentPayload>
  * 
  */
 export type CommentLike = $Result.DefaultSelection<Prisma.$CommentLikePayload>
+/**
+ * Model postlikes
+ * 
+ */
+export type postlikes = $Result.DefaultSelection<Prisma.$postlikesPayload>
 
 /**
  * Enums
@@ -199,6 +204,16 @@ export class PrismaClient<
     * ```
     */
   get commentLike(): Prisma.CommentLikeDelegate<ExtArgs>;
+
+  /**
+   * `prisma.postlikes`: Exposes CRUD operations for the **postlikes** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Postlikes
+    * const postlikes = await prisma.postlikes.findMany()
+    * ```
+    */
+  get postlikes(): Prisma.postlikesDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -642,7 +657,8 @@ export namespace Prisma {
   export const ModelName: {
     posts: 'posts',
     Comment: 'Comment',
-    CommentLike: 'CommentLike'
+    CommentLike: 'CommentLike',
+    postlikes: 'postlikes'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -658,7 +674,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "posts" | "comment" | "commentLike"
+      modelProps: "posts" | "comment" | "commentLike" | "postlikes"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -857,6 +873,72 @@ export namespace Prisma {
           count: {
             args: Prisma.CommentLikeCountArgs<ExtArgs>
             result: $Utils.Optional<CommentLikeCountAggregateOutputType> | number
+          }
+        }
+      }
+      postlikes: {
+        payload: Prisma.$postlikesPayload<ExtArgs>
+        fields: Prisma.postlikesFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.postlikesFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.postlikesFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          findFirst: {
+            args: Prisma.postlikesFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.postlikesFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          findMany: {
+            args: Prisma.postlikesFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>[]
+          }
+          create: {
+            args: Prisma.postlikesCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          createMany: {
+            args: Prisma.postlikesCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.postlikesDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          update: {
+            args: Prisma.postlikesUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          deleteMany: {
+            args: Prisma.postlikesDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.postlikesUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.postlikesUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$postlikesPayload>
+          }
+          aggregate: {
+            args: Prisma.PostlikesAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregatePostlikes>
+          }
+          groupBy: {
+            args: Prisma.postlikesGroupByArgs<ExtArgs>
+            result: $Utils.Optional<PostlikesGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.postlikesCountArgs<ExtArgs>
+            result: $Utils.Optional<PostlikesCountAggregateOutputType> | number
           }
         }
       }
@@ -3680,6 +3762,850 @@ export namespace Prisma {
 
 
   /**
+   * Model postlikes
+   */
+
+  export type AggregatePostlikes = {
+    _count: PostlikesCountAggregateOutputType | null
+    _avg: PostlikesAvgAggregateOutputType | null
+    _sum: PostlikesSumAggregateOutputType | null
+    _min: PostlikesMinAggregateOutputType | null
+    _max: PostlikesMaxAggregateOutputType | null
+  }
+
+  export type PostlikesAvgAggregateOutputType = {
+    postid: number | null
+  }
+
+  export type PostlikesSumAggregateOutputType = {
+    postid: number | null
+  }
+
+  export type PostlikesMinAggregateOutputType = {
+    postid: number | null
+    username: string | null
+    createdAt: Date | null
+  }
+
+  export type PostlikesMaxAggregateOutputType = {
+    postid: number | null
+    username: string | null
+    createdAt: Date | null
+  }
+
+  export type PostlikesCountAggregateOutputType = {
+    postid: number
+    username: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type PostlikesAvgAggregateInputType = {
+    postid?: true
+  }
+
+  export type PostlikesSumAggregateInputType = {
+    postid?: true
+  }
+
+  export type PostlikesMinAggregateInputType = {
+    postid?: true
+    username?: true
+    createdAt?: true
+  }
+
+  export type PostlikesMaxAggregateInputType = {
+    postid?: true
+    username?: true
+    createdAt?: true
+  }
+
+  export type PostlikesCountAggregateInputType = {
+    postid?: true
+    username?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type PostlikesAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which postlikes to aggregate.
+     */
+    where?: postlikesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of postlikes to fetch.
+     */
+    orderBy?: postlikesOrderByWithRelationInput | postlikesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: postlikesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` postlikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` postlikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned postlikes
+    **/
+    _count?: true | PostlikesCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: PostlikesAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: PostlikesSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: PostlikesMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: PostlikesMaxAggregateInputType
+  }
+
+  export type GetPostlikesAggregateType<T extends PostlikesAggregateArgs> = {
+        [P in keyof T & keyof AggregatePostlikes]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregatePostlikes[P]>
+      : GetScalarType<T[P], AggregatePostlikes[P]>
+  }
+
+
+
+
+  export type postlikesGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: postlikesWhereInput
+    orderBy?: postlikesOrderByWithAggregationInput | postlikesOrderByWithAggregationInput[]
+    by: PostlikesScalarFieldEnum[] | PostlikesScalarFieldEnum
+    having?: postlikesScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: PostlikesCountAggregateInputType | true
+    _avg?: PostlikesAvgAggregateInputType
+    _sum?: PostlikesSumAggregateInputType
+    _min?: PostlikesMinAggregateInputType
+    _max?: PostlikesMaxAggregateInputType
+  }
+
+  export type PostlikesGroupByOutputType = {
+    postid: number
+    username: string
+    createdAt: Date
+    _count: PostlikesCountAggregateOutputType | null
+    _avg: PostlikesAvgAggregateOutputType | null
+    _sum: PostlikesSumAggregateOutputType | null
+    _min: PostlikesMinAggregateOutputType | null
+    _max: PostlikesMaxAggregateOutputType | null
+  }
+
+  type GetPostlikesGroupByPayload<T extends postlikesGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<PostlikesGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof PostlikesGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], PostlikesGroupByOutputType[P]>
+            : GetScalarType<T[P], PostlikesGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type postlikesSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    postid?: boolean
+    username?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["postlikes"]>
+
+
+  export type postlikesSelectScalar = {
+    postid?: boolean
+    username?: boolean
+    createdAt?: boolean
+  }
+
+
+  export type $postlikesPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "postlikes"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      postid: number
+      username: string
+      createdAt: Date
+    }, ExtArgs["result"]["postlikes"]>
+    composites: {}
+  }
+
+  type postlikesGetPayload<S extends boolean | null | undefined | postlikesDefaultArgs> = $Result.GetResult<Prisma.$postlikesPayload, S>
+
+  type postlikesCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<postlikesFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: PostlikesCountAggregateInputType | true
+    }
+
+  export interface postlikesDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['postlikes'], meta: { name: 'postlikes' } }
+    /**
+     * Find zero or one Postlikes that matches the filter.
+     * @param {postlikesFindUniqueArgs} args - Arguments to find a Postlikes
+     * @example
+     * // Get one Postlikes
+     * const postlikes = await prisma.postlikes.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends postlikesFindUniqueArgs>(args: SelectSubset<T, postlikesFindUniqueArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one Postlikes that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {postlikesFindUniqueOrThrowArgs} args - Arguments to find a Postlikes
+     * @example
+     * // Get one Postlikes
+     * const postlikes = await prisma.postlikes.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends postlikesFindUniqueOrThrowArgs>(args: SelectSubset<T, postlikesFindUniqueOrThrowArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first Postlikes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesFindFirstArgs} args - Arguments to find a Postlikes
+     * @example
+     * // Get one Postlikes
+     * const postlikes = await prisma.postlikes.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends postlikesFindFirstArgs>(args?: SelectSubset<T, postlikesFindFirstArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first Postlikes that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesFindFirstOrThrowArgs} args - Arguments to find a Postlikes
+     * @example
+     * // Get one Postlikes
+     * const postlikes = await prisma.postlikes.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends postlikesFindFirstOrThrowArgs>(args?: SelectSubset<T, postlikesFindFirstOrThrowArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more Postlikes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Postlikes
+     * const postlikes = await prisma.postlikes.findMany()
+     * 
+     * // Get first 10 Postlikes
+     * const postlikes = await prisma.postlikes.findMany({ take: 10 })
+     * 
+     * // Only select the `postid`
+     * const postlikesWithPostidOnly = await prisma.postlikes.findMany({ select: { postid: true } })
+     * 
+     */
+    findMany<T extends postlikesFindManyArgs>(args?: SelectSubset<T, postlikesFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a Postlikes.
+     * @param {postlikesCreateArgs} args - Arguments to create a Postlikes.
+     * @example
+     * // Create one Postlikes
+     * const Postlikes = await prisma.postlikes.create({
+     *   data: {
+     *     // ... data to create a Postlikes
+     *   }
+     * })
+     * 
+     */
+    create<T extends postlikesCreateArgs>(args: SelectSubset<T, postlikesCreateArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many Postlikes.
+     * @param {postlikesCreateManyArgs} args - Arguments to create many Postlikes.
+     * @example
+     * // Create many Postlikes
+     * const postlikes = await prisma.postlikes.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends postlikesCreateManyArgs>(args?: SelectSubset<T, postlikesCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a Postlikes.
+     * @param {postlikesDeleteArgs} args - Arguments to delete one Postlikes.
+     * @example
+     * // Delete one Postlikes
+     * const Postlikes = await prisma.postlikes.delete({
+     *   where: {
+     *     // ... filter to delete one Postlikes
+     *   }
+     * })
+     * 
+     */
+    delete<T extends postlikesDeleteArgs>(args: SelectSubset<T, postlikesDeleteArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one Postlikes.
+     * @param {postlikesUpdateArgs} args - Arguments to update one Postlikes.
+     * @example
+     * // Update one Postlikes
+     * const postlikes = await prisma.postlikes.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends postlikesUpdateArgs>(args: SelectSubset<T, postlikesUpdateArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more Postlikes.
+     * @param {postlikesDeleteManyArgs} args - Arguments to filter Postlikes to delete.
+     * @example
+     * // Delete a few Postlikes
+     * const { count } = await prisma.postlikes.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends postlikesDeleteManyArgs>(args?: SelectSubset<T, postlikesDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Postlikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Postlikes
+     * const postlikes = await prisma.postlikes.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends postlikesUpdateManyArgs>(args: SelectSubset<T, postlikesUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Postlikes.
+     * @param {postlikesUpsertArgs} args - Arguments to update or create a Postlikes.
+     * @example
+     * // Update or create a Postlikes
+     * const postlikes = await prisma.postlikes.upsert({
+     *   create: {
+     *     // ... data to create a Postlikes
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Postlikes we want to update
+     *   }
+     * })
+     */
+    upsert<T extends postlikesUpsertArgs>(args: SelectSubset<T, postlikesUpsertArgs<ExtArgs>>): Prisma__postlikesClient<$Result.GetResult<Prisma.$postlikesPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of Postlikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesCountArgs} args - Arguments to filter Postlikes to count.
+     * @example
+     * // Count the number of Postlikes
+     * const count = await prisma.postlikes.count({
+     *   where: {
+     *     // ... the filter for the Postlikes we want to count
+     *   }
+     * })
+    **/
+    count<T extends postlikesCountArgs>(
+      args?: Subset<T, postlikesCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], PostlikesCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Postlikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PostlikesAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends PostlikesAggregateArgs>(args: Subset<T, PostlikesAggregateArgs>): Prisma.PrismaPromise<GetPostlikesAggregateType<T>>
+
+    /**
+     * Group by Postlikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {postlikesGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends postlikesGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: postlikesGroupByArgs['orderBy'] }
+        : { orderBy?: postlikesGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, postlikesGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetPostlikesGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the postlikes model
+   */
+  readonly fields: postlikesFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for postlikes.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__postlikesClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the postlikes model
+   */ 
+  interface postlikesFieldRefs {
+    readonly postid: FieldRef<"postlikes", 'Int'>
+    readonly username: FieldRef<"postlikes", 'String'>
+    readonly createdAt: FieldRef<"postlikes", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * postlikes findUnique
+   */
+  export type postlikesFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter, which postlikes to fetch.
+     */
+    where: postlikesWhereUniqueInput
+  }
+
+  /**
+   * postlikes findUniqueOrThrow
+   */
+  export type postlikesFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter, which postlikes to fetch.
+     */
+    where: postlikesWhereUniqueInput
+  }
+
+  /**
+   * postlikes findFirst
+   */
+  export type postlikesFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter, which postlikes to fetch.
+     */
+    where?: postlikesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of postlikes to fetch.
+     */
+    orderBy?: postlikesOrderByWithRelationInput | postlikesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for postlikes.
+     */
+    cursor?: postlikesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` postlikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` postlikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of postlikes.
+     */
+    distinct?: PostlikesScalarFieldEnum | PostlikesScalarFieldEnum[]
+  }
+
+  /**
+   * postlikes findFirstOrThrow
+   */
+  export type postlikesFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter, which postlikes to fetch.
+     */
+    where?: postlikesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of postlikes to fetch.
+     */
+    orderBy?: postlikesOrderByWithRelationInput | postlikesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for postlikes.
+     */
+    cursor?: postlikesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` postlikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` postlikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of postlikes.
+     */
+    distinct?: PostlikesScalarFieldEnum | PostlikesScalarFieldEnum[]
+  }
+
+  /**
+   * postlikes findMany
+   */
+  export type postlikesFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter, which postlikes to fetch.
+     */
+    where?: postlikesWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of postlikes to fetch.
+     */
+    orderBy?: postlikesOrderByWithRelationInput | postlikesOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing postlikes.
+     */
+    cursor?: postlikesWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` postlikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` postlikes.
+     */
+    skip?: number
+    distinct?: PostlikesScalarFieldEnum | PostlikesScalarFieldEnum[]
+  }
+
+  /**
+   * postlikes create
+   */
+  export type postlikesCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * The data needed to create a postlikes.
+     */
+    data: XOR<postlikesCreateInput, postlikesUncheckedCreateInput>
+  }
+
+  /**
+   * postlikes createMany
+   */
+  export type postlikesCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many postlikes.
+     */
+    data: postlikesCreateManyInput | postlikesCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * postlikes update
+   */
+  export type postlikesUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * The data needed to update a postlikes.
+     */
+    data: XOR<postlikesUpdateInput, postlikesUncheckedUpdateInput>
+    /**
+     * Choose, which postlikes to update.
+     */
+    where: postlikesWhereUniqueInput
+  }
+
+  /**
+   * postlikes updateMany
+   */
+  export type postlikesUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update postlikes.
+     */
+    data: XOR<postlikesUpdateManyMutationInput, postlikesUncheckedUpdateManyInput>
+    /**
+     * Filter which postlikes to update
+     */
+    where?: postlikesWhereInput
+  }
+
+  /**
+   * postlikes upsert
+   */
+  export type postlikesUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * The filter to search for the postlikes to update in case it exists.
+     */
+    where: postlikesWhereUniqueInput
+    /**
+     * In case the postlikes found by the `where` argument doesn't exist, create a new postlikes with this data.
+     */
+    create: XOR<postlikesCreateInput, postlikesUncheckedCreateInput>
+    /**
+     * In case the postlikes was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<postlikesUpdateInput, postlikesUncheckedUpdateInput>
+  }
+
+  /**
+   * postlikes delete
+   */
+  export type postlikesDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+    /**
+     * Filter which postlikes to delete.
+     */
+    where: postlikesWhereUniqueInput
+  }
+
+  /**
+   * postlikes deleteMany
+   */
+  export type postlikesDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which postlikes to delete
+     */
+    where?: postlikesWhereInput
+  }
+
+  /**
+   * postlikes without action
+   */
+  export type postlikesDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the postlikes
+     */
+    select?: postlikesSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -3728,6 +4654,15 @@ export namespace Prisma {
   };
 
   export type CommentLikeScalarFieldEnum = (typeof CommentLikeScalarFieldEnum)[keyof typeof CommentLikeScalarFieldEnum]
+
+
+  export const PostlikesScalarFieldEnum: {
+    postid: 'postid',
+    username: 'username',
+    createdAt: 'createdAt'
+  };
+
+  export type PostlikesScalarFieldEnum = (typeof PostlikesScalarFieldEnum)[keyof typeof PostlikesScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -3971,6 +4906,51 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"CommentLike"> | Date | string
   }
 
+  export type postlikesWhereInput = {
+    AND?: postlikesWhereInput | postlikesWhereInput[]
+    OR?: postlikesWhereInput[]
+    NOT?: postlikesWhereInput | postlikesWhereInput[]
+    postid?: IntFilter<"postlikes"> | number
+    username?: StringFilter<"postlikes"> | string
+    createdAt?: DateTimeFilter<"postlikes"> | Date | string
+  }
+
+  export type postlikesOrderByWithRelationInput = {
+    postid?: SortOrder
+    username?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type postlikesWhereUniqueInput = Prisma.AtLeast<{
+    postid_username?: postlikesPostidUsernameCompoundUniqueInput
+    AND?: postlikesWhereInput | postlikesWhereInput[]
+    OR?: postlikesWhereInput[]
+    NOT?: postlikesWhereInput | postlikesWhereInput[]
+    postid?: IntFilter<"postlikes"> | number
+    username?: StringFilter<"postlikes"> | string
+    createdAt?: DateTimeFilter<"postlikes"> | Date | string
+  }, "postid_username">
+
+  export type postlikesOrderByWithAggregationInput = {
+    postid?: SortOrder
+    username?: SortOrder
+    createdAt?: SortOrder
+    _count?: postlikesCountOrderByAggregateInput
+    _avg?: postlikesAvgOrderByAggregateInput
+    _max?: postlikesMaxOrderByAggregateInput
+    _min?: postlikesMinOrderByAggregateInput
+    _sum?: postlikesSumOrderByAggregateInput
+  }
+
+  export type postlikesScalarWhereWithAggregatesInput = {
+    AND?: postlikesScalarWhereWithAggregatesInput | postlikesScalarWhereWithAggregatesInput[]
+    OR?: postlikesScalarWhereWithAggregatesInput[]
+    NOT?: postlikesScalarWhereWithAggregatesInput | postlikesScalarWhereWithAggregatesInput[]
+    postid?: IntWithAggregatesFilter<"postlikes"> | number
+    username?: StringWithAggregatesFilter<"postlikes"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"postlikes"> | Date | string
+  }
+
   export type postsCreateInput = {
     postedby: string
     posttype: number
@@ -4157,6 +5137,48 @@ export namespace Prisma {
 
   export type CommentLikeUncheckedUpdateManyInput = {
     commentId?: IntFieldUpdateOperationsInput | number
+    username?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type postlikesCreateInput = {
+    postid: number
+    username: string
+    createdAt?: Date | string
+  }
+
+  export type postlikesUncheckedCreateInput = {
+    postid: number
+    username: string
+    createdAt?: Date | string
+  }
+
+  export type postlikesUpdateInput = {
+    postid?: IntFieldUpdateOperationsInput | number
+    username?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type postlikesUncheckedUpdateInput = {
+    postid?: IntFieldUpdateOperationsInput | number
+    username?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type postlikesCreateManyInput = {
+    postid: number
+    username: string
+    createdAt?: Date | string
+  }
+
+  export type postlikesUpdateManyMutationInput = {
+    postid?: IntFieldUpdateOperationsInput | number
+    username?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type postlikesUncheckedUpdateManyInput = {
+    postid?: IntFieldUpdateOperationsInput | number
     username?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -4440,6 +5462,37 @@ export namespace Prisma {
     commentId?: SortOrder
   }
 
+  export type postlikesPostidUsernameCompoundUniqueInput = {
+    postid: number
+    username: string
+  }
+
+  export type postlikesCountOrderByAggregateInput = {
+    postid?: SortOrder
+    username?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type postlikesAvgOrderByAggregateInput = {
+    postid?: SortOrder
+  }
+
+  export type postlikesMaxOrderByAggregateInput = {
+    postid?: SortOrder
+    username?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type postlikesMinOrderByAggregateInput = {
+    postid?: SortOrder
+    username?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type postlikesSumOrderByAggregateInput = {
+    postid?: SortOrder
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
   }
@@ -4669,6 +5722,10 @@ export namespace Prisma {
      * @deprecated Use CommentLikeDefaultArgs instead
      */
     export type CommentLikeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CommentLikeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use postlikesDefaultArgs instead
+     */
+    export type postlikesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = postlikesDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

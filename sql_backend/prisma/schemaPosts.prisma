@@ -45,3 +45,12 @@ model CommentLike {
 
 
 }
+
+model postlikes {
+  postid   Int
+  username String
+  createdAt DateTime @default(now())
+
+  @@id([postid, username])          // one like per user per post
+  @@index([username])
+}

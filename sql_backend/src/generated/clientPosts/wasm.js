@@ -150,6 +150,12 @@ exports.Prisma.CommentLikeScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.PostlikesScalarFieldEnum = {
+  postid: 'postid',
+  username: 'username',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -168,7 +174,8 @@ exports.CommentStatus = exports.$Enums.CommentStatus = {
 exports.Prisma.ModelName = {
   posts: 'posts',
   Comment: 'Comment',
-  CommentLike: 'CommentLike'
+  CommentLike: 'CommentLike',
+  postlikes: 'postlikes'
 };
 
 /**
