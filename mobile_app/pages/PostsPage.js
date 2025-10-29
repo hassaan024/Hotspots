@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  TextInput,
 } from "react-native";
 import { styles } from "../styles";
 import {
@@ -18,6 +19,7 @@ import {
   API_BASE,
   getPostWithComments,
   updateLikeStatus,
+  addComment,
 } from "../components/api";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
@@ -114,6 +116,9 @@ export default function PostsPage() {
   const [viewingPost, setViewingPost] = useState(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [shareTargetPost, setShareTargetPost] = useState(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -153,15 +158,32 @@ export default function PostsPage() {
     setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));
   };
 
-  const handleComment = async (postid) => {
+ const handleComment = async (postid) => {
+   try {
+     setCommentsLoading(true);
+     const data = await getPostWithComments(postid); // GET /api/posts/:id/with-comments
+     setViewingPost(data);
+   } catch (error) {
+     console.error("Error loading comments:", error);
+     alert(`Couldn't load comments: ${String(error?.message || error)}`);
+   } finally {
+     setCommentsLoading(false);
+   }
+ };
+  const sendComment = async () => {
+    const body = commentText.trim();
+    if (!body) return;
     try {
-      setLoading(true);
-      const data = await getPostWithComments(postid);
-      setViewingPost(data);
-    } catch (error) {
-      console.error("Error loading comments:", error);
+      setCommentSending(true);
+      // server returns the created comment with fields { commentid, username, text, ... }
+      const created = await addComment(viewingPost.postid, { body }); // POST /api/posts/:id/comments
+      setViewingPost((v) => ({ ...v, comments: [...(v?.comments || []), created] }));
+      setCommentText("");
+    } catch (e) {
+      console.error(e);
+      alert(`Failed to comment: ${String(e?.message || e)}`);
     } finally {
-      setLoading(false);
+      setCommentSending(false);
     }
   };
 
@@ -213,6 +235,41 @@ export default function PostsPage() {
           ) : (
             <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
           )}
+                    {/* Commen maker */}
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 }}>
+                      <TextInput
+                        value={commentText}
+                       onChangeText={setCommentText}
+                        placeholder="Add a comment…"
+                        placeholderTextColor="#9CA3AF"
+                        onSubmitEditing={sendComment}
+                        editable={!commentSending}
+                        style={{
+                         flex: 1,
+                          color: "#E5E7EB",
+                          backgroundColor: "#0B1220",
+                          borderColor: "#1F2937",
+                          borderWidth: 1,
+                          borderRadius: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={sendComment}
+                        disabled={commentSending || !commentText.trim()}
+                        style={{
+                          backgroundColor: commentSending || !commentText.trim() ? "#374151" : "#2563EB",
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                          {commentSending ? "Sending…" : "Send"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
         </View>
       </ScrollView>
     );
