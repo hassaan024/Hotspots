@@ -19,43 +19,78 @@ router.get("/", async (req, res, next) => {
     const { postedby } = req.query as { postedby?: string };
     const where = postedby ? { postedby } : undefined;
 
-    const me = (req as any).user?.username || null;
-
-    const rows = await postsDb.posts.findMany({
+    // 1) base posts — select only fields that exist in *your* model
+    const posts = await postsDb.posts.findMany({
       where,
       orderBy: { postid: "desc" },
-      include: {
-        _count: { select: { postLikes: true } },                    // likeCount
-        ...(me
-          ? { postLikes: { where: { username: me }, select: { username: true } } } // isLiked
-          : {}),
+      select: {
+        postid: true,
+        postedby: true,
+        datapath: true,
+        thumbpath: true,
+        description: true,
+        posttype: true,
+        location: true,
+        visibility: true,
+        // ⚠️ no createdAt: your schema doesn’t have it
       },
     });
 
-    const posts = rows.map((r: any) => ({
-      // all scalar columns are present because we used `include`, not `select`
-      postid: r.postid,
-      postedby: r.postedby,
-      datapath: r.datapath,
-      thumbpath: r.thumbpath,
-      description: r.description,
-      posttype: r.posttype,
-      location: r.location,
-      visibility: r.visibility,
-      createdAt: r.createdAt,
+    if (posts.length === 0) return res.json([]);
 
-      likeCount: r._count?.postLikes ?? 0,
-      isLiked: Array.isArray(r.postLikes) && r.postLikes.length > 0,
+    const postIds = posts.map(p => p.postid);
 
+    // 2) like counts (try; if schema isn’t ready, fall back to zeros)
+    let countMap = new Map<number, number>();
+    try {
+      const countsRows = await postsDb.posts.findMany({
+        where: { postid: { in: postIds } },
+        select: {
+          postid: true,
+          _count: { select: { postlikes: true } }, // requires posts { postLikes PostLike[] }
+        },
+      });
+      countMap = new Map<number, number>(
+        countsRows.map(r => [r.postid, r._count.postlikes])
+      );
+    } catch {
+      // leave countMap empty; we’ll default to 0
+    }
 
+    // 3) which posts the current user liked (try; if table/model missing, default to none)
+    const me = (req as any).user?.username || null;
+    let likedSet = new Set<number>();
+    if (me) {
+      try {
+        const mine = await postsDb.postlikes.findMany({
+          where: { username: me, postid: { in: postIds } },
+          select: { postid: true },
+        });
+        likedSet = new Set(mine.map(m => m.postid));
+      } catch {
+        // leave likedSet empty; we’ll default to false
+      }
+    }
+
+    // 4) merge
+    const payload = posts.map(p => ({
+      ...p,
+      likeCount: countMap.get(p.postid) ?? 0,
+      isLiked: likedSet.has(p.postid),
     }));
 
-    res.json(posts);
-  } catch (e) {
-    console.error("GET /api/posts failed:", e);
+    res.json(payload);
+  } catch (e: any) {
+    console.error("GET /api/posts failed:", {
+      message: e?.message,
+      code: e?.code,
+      meta: e?.meta,
+      stack: e?.stack,
+    });
     next(e);
   }
 });
+
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -331,20 +366,19 @@ router.post("/:postid/likes", authRequired, async (req, res) => {
   if (typeof like !== "boolean") return res.status(400).json({ error: "like must be boolean" });
 
   if (like) {
-    // create if missing
-    await postsDb.postLike.upsert({
+    await postsDb.postlikes.upsert({
       where: { postid_username: { postid, username: me } },
       update: {},
       create: { postid, username: me },
     });
   } else {
     // remove if present
-    await postsDb.postLike.deleteMany({ where: { postid, username: me } });
+    await postsDb.postlikes.deleteMany({ where: { postid, username: me } });
   }
 
   const [count, mine] = await Promise.all([
-    postsDb.postLike.count({ where: { postid } }),
-    postsDb.postLike.findUnique({ where: { postid_username: { postid, username: me } } }),
+    postsDb.postlikes.count({ where: { postid } }),
+    postsDb.postlikes.findUnique({ where: { postid_username: { postid, username: me } } }),
   ]);
 
   res.json({ postid, liked: !!mine, likeCount: count });

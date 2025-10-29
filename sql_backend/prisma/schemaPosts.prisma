@@ -24,6 +24,8 @@ model posts {
   description String? @db.VarChar(255)
 
   @@index([postedby], map: "posts_users_username_fk")
+
+
 }
 model Comment {
   commentid Int     @id  @default(autoincrement())
