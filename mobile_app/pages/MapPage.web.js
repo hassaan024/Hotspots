@@ -398,9 +398,10 @@ export default function MapPage() {
           // Outer wrapper, provides the gradient border like the post box
           const outer = document.createElement("div");
           outer.style.position = "relative";
-          outer.style.padding = "1px";
+          outer.style.padding = "1px"; // always show ring, even for solo posts
           outer.style.borderRadius = "6px";
           outer.style.background = "linear-gradient(90deg,#FFD600,#FF7A00,#FF0069,#D300C5,#7638FA)";
+          outer.style.outline = "none";
 
           // Inner container, holds the actual media and shadow
           const frame = document.createElement("div");
@@ -410,6 +411,7 @@ export default function MapPage() {
           frame.style.overflow = "hidden";
           frame.style.boxShadow = "0 2px 6px rgba(0,0,0,.4)";
           frame.style.background = "#000";
+          frame.style.outline = "none";
 
           const inner = document.createElement("img");
           inner.src =
@@ -545,12 +547,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
 
   return (
     <>
-    <View style={styles.titleRow}>
-      <View style={styles.titleBubble}>
-        <Text style={styles.title}>Maps</Text>
-      </View>
-    </View>
-    <View style={styles.screenMap}>
+    <View style={[styles.app, { paddingTop: 10 }]}>
       {error ? (
         <Text style={styles.screenSub}>{error}</Text>
       ) : (
@@ -586,8 +583,8 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
               activeOpacity={1}
               onPress={() => {}}
               style={{
-                backgroundColor: "transparent",
-                borderRadius: 12,
+                backgroundColor: "#121821",
+                borderRadius: 16,
                 padding: 0,
                 width: "90%",
                 maxWidth: 400,
@@ -597,78 +594,85 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                 borderColor: "transparent",
               }}
             >
-              <View style={[styles.postWrapper, { backgroundColor: "transparent", padding: 0 }]}>
-                <div style={{
-                  padding: 1,
-                  borderRadius: 12,
-                  background: "linear-gradient(90deg,#FFD600,#FF7A00,#FF0069,#D300C5,#7638FA)"
-                }}>
-                  <View style={[
-                    styles.postBox,
-                    { marginVertical: 0, backgroundColor: "transparent", padding: 0, borderRadius: 11, overflow: "hidden", borderWidth: 0 }
-                  ]}>
-                    { (Number(selectedPost?.posttype) === 1 || isVideoPath(String(selectedPost?.datapath || ""))) ? (
-                      <video
-                        key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
-                        src={toImageUri(selectedPost.datapath)}
-                        poster={toImageUri(selectedPost.thumbpath)}
-                        playsInline
-                        autoPlay
-                        muted={!AUDIO_ENABLED}
-                        loop
-                        controls={false}
-                        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-                        disablePictureInPicture
-                        onContextMenu={(e) => e.preventDefault()}
-                        data-hotspots-video
-                        onLoadedMetadata={(e) => {
-                          if (AUDIO_ENABLED) {
-                            try {
-                              e.currentTarget.muted = false;
-                              const p = e.currentTarget.play();
-                              if (p && typeof p.catch === "function") p.catch(() => {});
-                            } catch {}
-                          }
-                        }}
-                        onCanPlay={(e) => {
+              <View style={[styles.postWrapper, { backgroundColor: "#121821", padding: 0 }]}>
+                <View style={[
+                  styles.postBox,
+                  { marginVertical: 0, backgroundColor: "transparent", padding: 0, borderRadius: 11, overflow: "hidden", borderWidth: 0 }
+                ]}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Image
+                        source={{ uri: (selectedPost && selectedPost.profilepic && selectedPost.profilepic !== "" ? toImageUri(selectedPost.profilepic) : "https://cdn-icons-png.flaticon.com/512/847/847969.png") }}
+                        style={{ width: 38, height: 38, borderRadius: 19, marginRight: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
+                      />
+                      <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{selectedPost?.postedby || "Unknown"}</Text>
+                    </View>
+                  </View>
+                  { (Number(selectedPost?.posttype) === 1 || isVideoPath(String(selectedPost?.datapath || ""))) ? (
+                    <video
+                      key={String(selectedPost?.postid || selectedPost?.id || selectedPost?.datapath)}
+                      src={toImageUri(selectedPost.datapath)}
+                      poster={toImageUri(selectedPost.thumbpath)}
+                      playsInline
+                      autoPlay
+                      muted={!AUDIO_ENABLED}
+                      loop
+                      controls={false}
+                      controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
+                      data-hotspots-video
+                      onLoadedMetadata={(e) => {
+                        if (AUDIO_ENABLED) {
                           try {
-                            if (AUDIO_ENABLED) e.currentTarget.muted = false;
+                            e.currentTarget.muted = false;
                             const p = e.currentTarget.play();
                             if (p && typeof p.catch === "function") p.catch(() => {});
                           } catch {}
-                        }}
-                        onClick={(e) => {
-                          const v = e.currentTarget;
-                          v.muted = !v.muted;
-                          try {
-                            const p = v.play();
-                            if (p && typeof p.catch === "function") p.catch(() => {});
-                          } catch {}
-                        }}
-                        style={{
-                          width: "100%",
-                          height: "auto",
-                          borderRadius: 10,
-                          display: "block",
-                          maxHeight: 750,
-                          objectFit: "contain"
-                        }}
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                    ) : (
-                      <Image
-                        source={{ uri: toImageUri(selectedPost.datapath) }}
-                        style={{
-                          width: "100%",
-                          height: undefined,
-                          aspectRatio: 1,
-                          resizeMode: "cover",
-                          borderRadius: 10,
-                        }}
-                      />
-                    )}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 10 }}>
+                        }
+                      }}
+                      onCanPlay={(e) => {
+                        try {
+                          if (AUDIO_ENABLED) e.currentTarget.muted = false;
+                          const p = e.currentTarget.play();
+                          if (p && typeof p.catch === "function") p.catch(() => {});
+                        } catch {}
+                      }}
+                      onClick={(e) => {
+                        const v = e.currentTarget;
+                        v.muted = !v.muted;
+                        try {
+                          const p = v.play();
+                          if (p && typeof p.catch === "function") p.catch(() => {});
+                        } catch {}
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: 14,
+                        display: "block",
+                        maxHeight: 750,
+                        objectFit: "contain",
+                        outline: "none"
+                      }}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <Image
+                      source={{ uri: toImageUri(selectedPost.datapath) }}
+                      style={{
+                        width: "100%",
+                        height: undefined,
+                        aspectRatio: 1,
+                        resizeMode: "cover",
+                        borderRadius: 14,
+                        outlineWidth: 0
+                      }}
+                    />
+                  )}
+                  <View style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                       <TouchableOpacity onPress={() => toggleLike(String(selectedPost?.postid || selectedPost?.id))}>
                         <Ionicons
                           name={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "heart" : "heart-outline"}
@@ -679,25 +683,21 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                       <TouchableOpacity onPress={() => handleComment(String(selectedPost?.postid || selectedPost?.id))}>
                         <Feather name="message-circle" size={24} color="#E5E7EB" />
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}
-                      >
+                      <TouchableOpacity onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}>
                         <Feather name="send" size={22} color="#E5E7EB" />
                       </TouchableOpacity>
                     </View>
-                    <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
-                      <Text style={{ color: "#E5E7EB", fontWeight: "600" }}>
-                        {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
-                      </Text>
-                    </View>
+
+                    <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
+                      {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
+                    </Text>
+
+                    <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
+                      <Text style={{ fontWeight: "bold" }}>@{selectedPost.postedby || "Unknown"} </Text>
+                      {String(selectedPost?.caption || "").trim() || "(no caption)"}
+                    </Text>
                   </View>
-                </div>
-                <Text style={[styles.username, { marginTop: 12, marginBottom: 8 }]}>
-                   {selectedPost.postedby || "Unknown"}
-                </Text>
-                <Text style={[styles.text, { marginBottom: 8 }]}>
-                  {String(selectedPost?.caption || "").trim() || "(no caption)"}
-                </Text>
+                </View>
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -741,7 +741,8 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                   <div style={{
                     padding: 1,
                     borderRadius: 12,
-                    background: "linear-gradient(90deg,#FFD600,#FF7A00,#FF0069,#D300C5,#7638FA)"
+                    background: "linear-gradient(90deg,#FFD600,#FF7A00,#FF0069,#D300C5,#7638FA)",
+                    outline: "none"
                   }}>
                     <div
                       className="hotspots-scroll"
@@ -762,8 +763,16 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                         const poster = toImageUri(it.thumbpath);
                         return (
                           <div key={String(it.postid || it.id || idx)} style={{ paddingBottom: 8 }}>
-                            <Text style={styles.username}>@{it.postedby || "Unknown"}</Text>
                             <View style={[styles.postBox, { paddingBottom: 8 }]}>
+                              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                  <Image
+                                    source={{ uri: (it && it.profilepic && it.profilepic !== "" ? toImageUri(it.profilepic) : "https://cdn-icons-png.flaticon.com/512/847/847969.png") }}
+                                    style={{ width: 38, height: 38, borderRadius: 19, marginRight: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
+                                  />
+                                  <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{it?.postedby || "Unknown"}</Text>
+                                </View>
+                              </View>
                               {isVid ? (
                                 <video
                                   src={src}
@@ -777,7 +786,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                                   disablePictureInPicture
                                   onContextMenu={(e) => e.preventDefault()}
                                   data-hotspots-video
-                                  style={{ width: "100%", height: 520, objectFit: "contain", display: "block" }}
+                                  style={{ width: "100%", height: 520, objectFit: "contain", display: "block", outline: "none" }}
                                   onLoadedMetadata={(e) => {
                                     if (AUDIO_ENABLED) {
                                       try {
@@ -806,41 +815,45 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                               ) : (
                                 <Image
                                   source={{ uri: src }}
-                                  style={{ width: "100%", height: 520, resizeMode: "contain" }}
+                                  style={{ width: "100%", height: 520, resizeMode: "contain", outlineWidth: 0 }}
                                 />
                               )}
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 8, paddingTop: 8 }}>
-                                <TouchableOpacity onPress={() => toggleLike(String(it.postid || it.id))}>
-                                  <Ionicons
-                                    name={likedPosts[String(it.postid || it.id)] ? "heart" : "heart-outline"}
-                                    size={24}
-                                    color={likedPosts[String(it.postid || it.id)] ? "#F87171" : "#E5E7EB"}
-                                  />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => handleComment(String(it.postid || it.id))}>
-                                  <Feather name="message-circle" size={22} color="#E5E7EB" />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { setShareTargetPost(it); setShareModalVisible(true); }}>
-                                  <Feather name="send" size={20} color="#E5E7EB" />
-                                </TouchableOpacity>
-                              </View>
-                              <View style={{ paddingHorizontal: 8 }}>
-                                <Text style={{ color: "#E5E7EB", fontWeight: "600" }}>
+                              <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                                  <TouchableOpacity onPress={() => toggleLike(String(it.postid || it.id))}>
+                                    <Ionicons
+                                      name={likedPosts[String(it.postid || it.id)] ? "heart" : "heart-outline"}
+                                      size={24}
+                                      color={likedPosts[String(it.postid || it.id)] ? "#F87171" : "#E5E7EB"}
+                                    />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity onPress={() => handleComment(String(it.postid || it.id))}>
+                                    <Feather name="message-circle" size={22} color="#E5E7EB" />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity onPress={() => { setShareTargetPost(it); setShareModalVisible(true); }}>
+                                    <Feather name="send" size={20} color="#E5E7EB" />
+                                  </TouchableOpacity>
+                                </View>
+
+                                <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
                                   {(likeCounts[String(it.postid || it.id)] || 0)} likes
+                                </Text>
+
+                                <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
+                                  <Text style={{ fontWeight: "bold" }}>@{it.postedby || "Unknown"} </Text>
+                                  {String(it?.caption || "").trim() || "(no caption)"}
                                 </Text>
                               </View>
                             </View>
-                            <Text style={[styles.text, { marginTop: 8 }]}>
-                              {String(it?.caption || "").trim() || "(no caption)"}
-                            </Text>
                             {idx < selectedGroup.length - 1 && (
                               <div
                                 aria-hidden="true"
                                 style={{
-                                  height: 1,
-                                  background:
-                                    "linear-gradient(to right, rgba(255,255,255,0.06), rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-                                  marginTop: 12
+                                  height: 2,
+                                  background: "linear-gradient(90deg,#FFD600,#FF7A00,#FF0069,#D300C5,#7638FA)",
+                                  opacity: 0.7,
+                                  borderRadius: 1,
+                                  marginTop: 0
                                 }}
                               />
                             )}
@@ -918,7 +931,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                         placeholderTextColor="#9CA3AF"
                         onSubmitEditing={sendComment}
                         editable={!commentSending}
-                        style={{ flex: 1, color: "#E5E7EB", backgroundColor: "#0B1220", borderColor: "#1F2937", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}
+                        style={{ flex: 1, color: "#E5E7EB", backgroundColor: "#121821", borderColor: "#1F2937", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}
                       />
                       <TouchableOpacity
                         onPress={sendComment}
