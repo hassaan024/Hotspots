@@ -6,7 +6,11 @@ export const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 if (!API_BASE) {
   throw new Error('Set EXPO_PUBLIC_API_URL');
 }
-
+let AUTH_TOKEN = null;
+export function setAuthToken(t) { AUTH_TOKEN = t; }
+function authHeaders() {
+  return AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
+}
 // Users
 export async function listUsers() {
   const r = await fetch(`${API_BASE}/api/users`);
@@ -32,7 +36,7 @@ export async function loginUser({ username, password }) {
   const r = await fetch(`${API_BASE}/api/users/login`, {
 
   method: "POST",
-  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
   body: JSON.stringify({ username, password }),
 });
 console.log('req url =', `${API_BASE}/api/users/login`);
@@ -44,13 +48,10 @@ console.log('login status=', r.status, 'ctype=', contentType, 'first100=', text.
 if (!contentType.includes("application/json")) {
   throw new Error(`Expected JSON but got ${contentType}. Starts with: ${text.slice(0,120)}`);
 }
-return JSON.parse(text);
-  if (!r.ok) {
-    const text = await r.text().catch(() => "");
-    throw new Error(text || `Login failed: ${r.status}`);
-  }
-
-  return r.json();
+  const payload = JSON.parse(text);
+  // expect: { user: {...}, token: "..." }
+  if (payload?.token) setAuthToken(payload.token);
+  return payload.user ?? payload;
 }
 
 //Posts
@@ -233,8 +234,7 @@ export async function listComments(postid, { parentid = null, after_ts = null, a
 export async function addComment(postid, { body, parentid = null }) {
   const r = await fetch(`${API_BASE}/api/posts/${postid}/comments`, {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ body, parentid }),
   });
   if (!r.ok) {
