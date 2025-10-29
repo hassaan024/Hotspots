@@ -4046,7 +4046,6 @@ export namespace Prisma {
   }
 
   export type CommentCreateInput = {
-    commentid: number
     postid: number
     parentid?: number | null
     author: string
@@ -4057,7 +4056,7 @@ export namespace Prisma {
   }
 
   export type CommentUncheckedCreateInput = {
-    commentid: number
+    commentid?: number
     postid: number
     parentid?: number | null
     author: string
@@ -4068,7 +4067,6 @@ export namespace Prisma {
   }
 
   export type CommentUpdateInput = {
-    commentid?: IntFieldUpdateOperationsInput | number
     postid?: IntFieldUpdateOperationsInput | number
     parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string
@@ -4090,7 +4088,7 @@ export namespace Prisma {
   }
 
   export type CommentCreateManyInput = {
-    commentid: number
+    commentid?: number
     postid: number
     parentid?: number | null
     author: string
@@ -4101,7 +4099,6 @@ export namespace Prisma {
   }
 
   export type CommentUpdateManyMutationInput = {
-    commentid?: IntFieldUpdateOperationsInput | number
     postid?: IntFieldUpdateOperationsInput | number
     parentid?: NullableIntFieldUpdateOperationsInput | number | null
     author?: StringFieldUpdateOperationsInput | string

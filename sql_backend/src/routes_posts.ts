@@ -27,6 +27,7 @@ router.get("/", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+const JWT_SECRET = process.env.JWT_SECRET;
 
 router.get("/locations", async (req, res) => {
   try {
@@ -156,10 +157,10 @@ router.post("/upload", upload.single("file"), (req, res) => {
 });
 // GET latest N comments (top-level or replies) with keyset pagination
 function authRequired(req, res, next) {
-  const u = (req as any).user;
-  if (u?.username) return next();
+  if ((req as any).user?.username) return next();
   return res.status(401).json({ error: "auth required" });
 }
+
 
 
 // Shape the comment to what the UI renders: { commentid, postid, parentid, username, text, created_at }

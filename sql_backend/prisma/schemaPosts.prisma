@@ -26,7 +26,7 @@ model posts {
   @@index([postedby], map: "posts_users_username_fk")
 }
 model Comment {
-  commentid Int     @id      @map("commentid")
+  commentid Int     @id  @default(autoincrement())
   postid    Int     @map("postid")
   parentid  Int?    @map("parentid")
   author    String  @map("author")
