@@ -20,6 +20,7 @@ import {
   getPostWithComments,
   updateLikeStatus,
   addComment,
+  setFollow,
 } from "../components/api";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
@@ -175,9 +176,21 @@ const toggleLike = async (postid) => {
 };
 
 
-  const handleFollowToggle = (username) => {
-    setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));
-  };
+const handleFollowToggle = async (username) => {
+  const prev = !!followStatus[username];
+  const next = !prev;
+
+  // optimistic
+  setFollowStatus((p) => ({ ...p, [username]: next }));
+
+  try {
+    await setFollow(username, next);
+  } catch (e) {
+    console.error(e);
+    // rollback on error
+    setFollowStatus((p) => ({ ...p, [username]: prev }));
+  }
+};
 
  const handleComment = async (postid) => {
    try {
@@ -411,12 +424,20 @@ const toggleLike = async (postid) => {
                     {likeCounts[item.postid] || 0} likes
                   </Text>
 
-                  {!!item.description && (
-                    <Text style={{ color: "#E5E7EB", marginTop: 4 }}>
-                      <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
-                      {item.description}
-                    </Text>
-                  )}
+                {!!item.description && (
+                  <Text
+                    style={{
+                      color: "#E5E7EB",
+                      marginTop: 6,
+                      fontSize: 15,
+                      lineHeight: 20,
+                    }}
+                  >
+                    <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
+                    {item.description}
+                  </Text>
+                )}
+
                 </View>
               </View>
             );

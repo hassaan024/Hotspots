@@ -195,18 +195,32 @@ export default function MapPage() {
     installAudioUnlockOnce();
   }, []);
 
-  const toggleLike = async (postid) => {
-    setLikedPosts((prev) => {
-      const already = !!prev[postid];
-      setLikeCounts((counts) => ({
-        ...counts,
-        [postid]: Math.max(0, (counts[postid] || 0) + (already ? -1 : 1)),
-      }));
-      return { ...prev, [postid]: !already };
-    });
-    const likedNow = !likedPosts[postid];
-    try { await updateLikeStatus(postid, likedNow); } catch {}
-  };
+const toggleLike = async (postid) => {
+  const prevLiked = !!likedPosts[postid];
+  const nextLiked = !prevLiked;
+
+  // optimistic
+  setLikedPosts((p) => ({ ...p, [postid]: nextLiked }));
+  setLikeCounts((counts) => ({
+    ...counts,
+    [postid]: Math.max(0, (counts[postid] || 0) + (nextLiked ? 1 : -1)),
+  }));
+
+  try {
+    const res = await updateLikeStatus(postid, nextLiked);
+    setLikedPosts((p) => ({ ...p, [postid]: !!res.liked }));
+    setLikeCounts((counts) => ({ ...counts, [postid]: res.likeCount ?? counts[postid] }));
+  } catch (e) {
+    console.error(e);
+    // rollback
+    setLikedPosts((p) => ({ ...p, [postid]: prevLiked }));
+    setLikeCounts((counts) => ({
+      ...counts,
+      [postid]: Math.max(0, (counts[postid] || 0) + (prevLiked ? 1 : -1)),
+    }));
+  }
+};
+
 
   const handleComment = async (postid) => {
     try {
@@ -459,8 +473,19 @@ export default function MapPage() {
               setSelectedGroup(g.items);
               setGroupIndex(0);
             } else if (g.items.length === 1) {
-              setSelectedPost(recent);
-            }
+               const only = g.items[0];
+               // fetch full post
+               getPostWithComments(only.postid).then((full) => {
+                 setSelectedPost(full);
+                 // seed likes too, if you want:
+                 setLikedPosts((p) => ({ ...p, [full.postid]: !!full.isLiked }));
+                 setLikeCounts((c) => ({ ...c, [full.postid]: full.likeCount || 0 }));
+               }).catch(() => {
+                 // fallback to lightweight
+                 setSelectedPost(only);
+               });
+             }
+
           };
           if (mk.addListener) mk.addListener("gmp-click", open);
           outer.addEventListener("click", open);
@@ -671,32 +696,39 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                       }}
                     />
                   )}
-                  <View style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                      <TouchableOpacity onPress={() => toggleLike(String(selectedPost?.postid || selectedPost?.id))}>
-                        <Ionicons
-                          name={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "heart" : "heart-outline"}
-                          size={26}
-                          color={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "#F87171" : "#E5E7EB"}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleComment(String(selectedPost?.postid || selectedPost?.id))}>
-                        <Feather name="message-circle" size={24} color="#E5E7EB" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}>
-                        <Feather name="send" size={22} color="#E5E7EB" />
-                      </TouchableOpacity>
-                    </View>
+<View style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
+  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+    <TouchableOpacity onPress={() => toggleLike(String(selectedPost?.postid || selectedPost?.id))}>
+      <Ionicons
+        name={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "heart" : "heart-outline"}
+        size={26}
+        color={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "#F87171" : "#E5E7EB"}
+      />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => handleComment(String(selectedPost?.postid || selectedPost?.id))}>
+      <Feather name="message-circle" size={24} color="#E5E7EB" />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}>
+      <Feather name="send" size={22} color="#E5E7EB" />
+    </TouchableOpacity>
+  </View>
 
-                    <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
-                      {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
-                    </Text>
+  <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
+    {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
+  </Text>
 
-                    <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
-                      <Text style={{ fontWeight: "bold" }}>@{selectedPost.postedby || "Unknown"} </Text>
-                      {String(selectedPost?.caption || "").trim() || "(no caption)"}
-                    </Text>
-                  </View>
+  <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
+    <Text style={{ fontWeight: "bold" }}>
+      @{selectedPost?.postedby || "Unknown"}{" "}
+    </Text>
+    {String(
+      selectedPost?.description ||
+      selectedPost?.caption ||
+      ""
+    ).trim() || "(no description)"}
+  </Text>
+</View>
+
                 </View>
               </View>
             </TouchableOpacity>
@@ -841,8 +873,9 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
 
                                 <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
                                   <Text style={{ fontWeight: "bold" }}>@{it.postedby || "Unknown"} </Text>
-                                  {String(it?.caption || "").trim() || "(no caption)"}
+                                  {String(it?.description || it?.caption || "").trim() || "(no description)"}
                                 </Text>
+
                               </View>
                             </View>
                             {idx < selectedGroup.length - 1 && (

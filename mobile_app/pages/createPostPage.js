@@ -224,7 +224,7 @@ export default function CreatePostPage() {
         datapath: filename,         // plain filename from server
         location: (locationText || "").replace(/\s+/g, ""), // "lat,lng" no spaces
         thumbpath: thumbname,
-        caption: caption || "",
+        description: caption || "",
       };
 
       if (!payload.postedby) throw new Error("No username in AuthContext");

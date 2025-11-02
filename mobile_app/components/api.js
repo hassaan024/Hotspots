@@ -296,3 +296,16 @@ export async function updateCommentLikeStatus(postid, commentid, like) {
   if (!r.ok) throw new Error(`comment like toggle failed: ${r.status}`);
   return r.json(); // { commentid, liked, likeCount }
 }
+export async function setFollow(username, follow) {
+  const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}/follow`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ follow }),
+  });
+  if (!r.ok) throw new Error(`follow failed: ${r.status}`);
+  return r.json(); // { user, followed, followers, following }
+}
