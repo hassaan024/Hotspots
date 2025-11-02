@@ -57,7 +57,6 @@ router.get("/", async (req, res, next) => {
       // leave countMap empty; we’ll default to 0
     }
 
-    // 3) which posts the current user liked (try; if table/model missing, default to none)
     const me = (req as any).user?.username || null;
     let likedSet = new Set<number>();
     if (me) {
@@ -68,11 +67,9 @@ router.get("/", async (req, res, next) => {
         });
         likedSet = new Set(mine.map(m => m.postid));
       } catch {
-        // leave likedSet empty; we’ll default to false
       }
     }
 
-    // 4) merge
     const payload = posts.map(p => ({
       ...p,
       likeCount: countMap.get(p.postid) ?? 0,
@@ -96,19 +93,17 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 router.get("/locations", async (req, res) => {
   try {
-    // 1) SELECT all needed fields
     const rows = await postsDb.posts.findMany({
       select: {
         postid: true,
         postedby: true,
         location: true,   // "lat,lng" string
         datapath: true,
-        thumbpath: true,  // <-- must exist in your model
-        posttype: true,   // <-- must exist in your model
+        thumbpath: true,
+        posttype: true,
       },
     });
 
-    // 2) Map to points; validate coords
     const points = rows
       .map((r) => {
         const [a, b] = String(r.location ?? "").split(",").map((s) => s.trim());

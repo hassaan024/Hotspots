@@ -125,12 +125,10 @@ const load = useCallback(async () => {
     const data = await listPosts();
     setPosts(data);
 
-    // like counts
     const counts = {};
     data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
     setLikeCounts(counts);
 
-    // liked state (from server if available)
     const liked = {};
     data.forEach((p) => (liked[p.postid] = !!p.isLiked));
     setLikedPosts(liked);
