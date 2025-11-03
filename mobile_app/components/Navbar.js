@@ -1,21 +1,24 @@
+// Navbar.js
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // Icon set
-import { styles } from "../styles";
+import { View, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { styles, ig } from "../stylesNavbar";
 
 export default function Navbar({ current, onChange }) {
-  const size = 22;
-  const activeColor = "#ffffff";
-  const inactiveColor = "#9aa0a6";
+  const size = 24;
+  const activeColor = "#fff";
+  const inactiveColor = "#9ca3af";
 
   return (
-    <View style={styles.navbar}>
-      <Text style={styles.brand}>Hotspots</Text>
+    <View style={styles.navbarWrap}>
+      {/* Gradient top border */}
+      <LinearGradient colors={ig.gradient} style={styles.navbarGradient} />
 
-      <View style={styles.navButtons}>
-        {/* Map */}
+      {/* Navbar background */}
+      <View style={styles.navbar}>
         <TouchableOpacity
-          style={[styles.navBtn, current === "map" && styles.navBtnActive]}
+          style={styles.navBtn}
           onPress={() => onChange("map")}
         >
           <Ionicons
@@ -25,9 +28,8 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
-        {/* Posts (feed) */}
         <TouchableOpacity
-          style={[styles.navBtn, current === "posts" && styles.navBtnActive]}
+          style={styles.navBtn}
           onPress={() => onChange("posts")}
         >
           <Ionicons
@@ -37,9 +39,8 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
-        {/* Create Post */}
         <TouchableOpacity
-          style={[styles.navBtn, current === "createPost" && styles.navBtnActive]}
+          style={styles.navBtn}
           onPress={() => onChange("createPost")}
         >
           <Ionicons
@@ -49,14 +50,15 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
-        {/* Profile */}
         <TouchableOpacity
-          style={[styles.navBtn, current === "profile" && styles.navBtnActive]}
+          style={styles.navBtn}
           onPress={() => onChange("profile")}
         >
           <Ionicons
             name={
-              current === "profile" ? "person-circle" : "person-circle-outline"
+              current === "profile"
+                ? "person-circle"
+                : "person-circle-outline"
             }
             size={size + 2}
             color={current === "profile" ? activeColor : inactiveColor}

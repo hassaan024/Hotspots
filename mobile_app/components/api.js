@@ -6,7 +6,11 @@ export const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 if (!API_BASE) {
   throw new Error('Set EXPO_PUBLIC_API_URL');
 }
-
+let AUTH_TOKEN = null;
+export function setAuthToken(t) { AUTH_TOKEN = t; }
+function authHeaders() {
+  return AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
+}
 // Users
 export async function listUsers() {
   const r = await fetch(`${API_BASE}/api/users`);
@@ -32,7 +36,7 @@ export async function loginUser({ username, password }) {
   const r = await fetch(`${API_BASE}/api/users/login`, {
 
   method: "POST",
-  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
   body: JSON.stringify({ username, password }),
 });
 console.log('req url =', `${API_BASE}/api/users/login`);
@@ -44,17 +48,20 @@ console.log('login status=', r.status, 'ctype=', contentType, 'first100=', text.
 if (!contentType.includes("application/json")) {
   throw new Error(`Expected JSON but got ${contentType}. Starts with: ${text.slice(0,120)}`);
 }
-return JSON.parse(text);
-  if (!r.ok) {
-    const text = await r.text().catch(() => "");
-    throw new Error(text || `Login failed: ${r.status}`);
-  }
-  return r.json();
+  const payload = JSON.parse(text);
+  // expect: { user: {...}, token: "..." }
+  if (payload?.token) setAuthToken(payload.token);
+  return payload.user ?? payload;
 }
 
 //Posts
 export async function listPosts() {
-  const r = await fetch(`${API_BASE}/api/posts`);
+  const r = await fetch(`${API_BASE}/api/posts`, {
+    credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
+  });
   if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
   return r.json();
 }
@@ -75,7 +82,12 @@ export async function createPost(input) {
   }  return r.json();
 }
 export async function listUserPosts(username) {
-  const r = await fetch(`${API_BASE}/api/posts?postedby=${encodeURIComponent(username)}`);
+  const r = await fetch(`${API_BASE}/api/posts?postedby=${encodeURIComponent(username)}`, {
+    credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
+  });
   if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
   return r.json();
 }
@@ -212,6 +224,88 @@ export async function uploadImage(mediaUri, meta = {}) {
     }
     throw e;
   }
+
 }
 
 
+// --- Comments API ---
+export async function listComments(postid, { parentid = null, after_ts = null, after_id = null, limit = 20 } = {}) {
+  const qs = new URLSearchParams();
+  if (parentid != null) qs.set("parentid", String(parentid));
+  if (after_ts) qs.set("after_ts", after_ts);
+  if (after_id) qs.set("after_id", String(after_id));
+  if (limit) qs.set("limit", String(limit));
+
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments?${qs.toString()}`, { credentials: "include" });
+  if (!r.ok) throw new Error(`comments failed: ${r.status}`);
+  return r.json(); // { items: [...], next_cursor: { after_ts, after_id } | null }
+}
+
+export async function addComment(postid, { body, parentid = null }) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ body, parentid }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => "");
+    throw new Error(`create comment failed: ${r.status} ${t}`);
+  }
+  return r.json(); // created comment
+}
+
+// Convenience for your detail screen
+export async function getPostWithComments(postid) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/with-comments`, {
+    credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
+  });
+  if (!r.ok) throw new Error(`post w/ comments failed: ${r.status}`);
+  return r.json();
+}
+// api.js
+export async function getPostLikeState(postid) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, { credentials: "include" });
+  if (!r.ok) throw new Error(`like state failed: ${r.status}`);
+  return r.json(); // { postid, liked, likeCount }
+}
+
+export async function updateLikeStatus(postid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`like toggle failed: ${r.status}`);
+  return r.json();
+}
+
+export async function updateCommentLikeStatus(postid, commentid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments/${commentid}/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    credentials: "include",
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`comment like toggle failed: ${r.status}`);
+  return r.json(); // { commentid, liked, likeCount }
+}
+export async function setFollow(username, follow) {
+  const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}/follow`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ follow }),
+  });
+  if (!r.ok) throw new Error(`follow failed: ${r.status}`);
+  return r.json(); // { user, followed, followers, following }
+}

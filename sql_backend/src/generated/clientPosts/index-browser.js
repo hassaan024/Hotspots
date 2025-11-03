@@ -128,7 +128,32 @@ exports.Prisma.PostsScalarFieldEnum = {
   posttype: 'posttype',
   datapath: 'datapath',
   location: 'location',
-  visibility: 'visibility'
+  visibility: 'visibility',
+  thumbpath: 'thumbpath',
+  description: 'description'
+};
+
+exports.Prisma.CommentScalarFieldEnum = {
+  commentid: 'commentid',
+  postid: 'postid',
+  parentid: 'parentid',
+  author: 'author',
+  body: 'body',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CommentLikeScalarFieldEnum = {
+  commentId: 'commentId',
+  username: 'username',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.PostlikesScalarFieldEnum = {
+  postid: 'postid',
+  username: 'username',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -140,10 +165,17 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-
+exports.CommentStatus = exports.$Enums.CommentStatus = {
+  visible: 'visible',
+  deleted: 'deleted',
+  hidden: 'hidden'
+};
 
 exports.Prisma.ModelName = {
-  posts: 'posts'
+  posts: 'posts',
+  Comment: 'Comment',
+  CommentLike: 'CommentLike',
+  postlikes: 'postlikes'
 };
 
 /**
