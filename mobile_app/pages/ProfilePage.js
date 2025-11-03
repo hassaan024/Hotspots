@@ -80,7 +80,11 @@ function getPoster(p) {
 
 const Media = ({ uri, isVideo, poster, size }) => {
   const [ar, setAr] = React.useState(1);
+  const [muted, setMuted] = React.useState(true);
+  const webVideoRef = React.useRef(null);
+  const nativeVideoRef = React.useRef(null);
 
+  // derive aspect ratio for images
   React.useEffect(() => {
     if (!isVideo && uri) {
       Image.getSize(
@@ -92,6 +96,30 @@ const Media = ({ uri, isVideo, poster, size }) => {
       );
     }
   }, [uri, isVideo]);
+
+  // WEB: unmute and ensure playback on first user interaction
+  const handleWebClick = () => {
+    try {
+      setMuted(false);
+      const v = webVideoRef.current;
+      if (v && v.play) v.play().catch(() => {});
+    } catch {}
+  };
+
+  // NATIVE: unmute and ensure playback on tap
+  const handleNativePress = async () => {
+    try {
+      setMuted(false);
+      const v = nativeVideoRef.current;
+      if (v?.setStatusAsync) {
+        await v.setStatusAsync({
+          shouldPlay: true,
+          isMuted: false,
+          volume: 1.0,
+        });
+      }
+    } catch {}
+  };
 
   if (!isVideo) {
     return (
@@ -105,16 +133,23 @@ const Media = ({ uri, isVideo, poster, size }) => {
   if (isWeb) {
     return (
       <video
+        ref={webVideoRef}
         src={uri}
         poster={poster || undefined}
         playsInline
         autoPlay
-        muted
+        muted={muted}
         loop
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
-        style={{ width: size, height: "auto", display: "block", objectFit: "cover" }}
+        onLoadedData={() => {
+          try {
+            if (webVideoRef.current) webVideoRef.current.play().catch(() => {});
+          } catch {}
+        }}
+        onClick={handleWebClick}
+        style={{ width: size, height: "auto", display: "block", objectFit: "cover", cursor: "pointer" }}
       >
         Your browser does not support the video tag.
       </video>
@@ -122,21 +157,24 @@ const Media = ({ uri, isVideo, poster, size }) => {
   }
 
   return VideoComp ? (
-    <VideoComp
-      source={{ uri }}
-      style={{ width: size, height: size / ar }}
-      resizeMode="cover"
-      posterSource={poster ? { uri: poster } : undefined}
-      onLoad={({ naturalSize }) => {
-        const w = naturalSize?.width,
-          h = naturalSize?.height;
-        if (w && h) setAr(w / h);
-      }}
-      useNativeControls={false}
-      shouldPlay
-      isLooping
-      isMuted
-    />
+    <TouchableOpacity activeOpacity={1} onPress={handleNativePress}>
+      <VideoComp
+        ref={nativeVideoRef}
+        source={{ uri }}
+        style={{ width: size, height: size / ar }}
+        resizeMode="cover"
+        posterSource={poster ? { uri: poster } : undefined}
+        onLoad={({ naturalSize }) => {
+          const w = naturalSize?.width, h = naturalSize?.height;
+          if (w && h) setAr(w / h);
+        }}
+        useNativeControls={false}
+        shouldPlay
+        isLooping
+        isMuted={muted}
+        volume={muted ? 0.0 : 1.0}
+      />
+    </TouchableOpacity>
   ) : null;
 };
 
