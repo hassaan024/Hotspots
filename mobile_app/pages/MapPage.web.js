@@ -10,9 +10,13 @@ const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 const DENSITY_THRESHOLD = 3;
 const CLUSTER_RADIUS_M = 100; // show heatmap when >= this many posts are visible
-const ZOOM_THRESHOLD = 9;
+const ZOOM_THRESHOLD = 17;
 
 const CROWD_HIDE_MAX_ZOOM = 14;
+const HEAT_WEIGHT_EXP = 1.4;
+const HEAT_RADIUS = 36;
+const HEAT_OPACITY = 0.8;
+const HEAT_MAX_INTENSITY = 6;
 
 
 const Uluru = { lat: -25.344, lng: 131.031 };
@@ -177,6 +181,7 @@ export default function MapPage() {
   const markersRef = useRef([]);
   const galleryRef = useRef(null);
   const idleListenerRef = useRef(null);
+  const overlaysRef = useRef([]);
   const [error, setError] = useState(null);
   const [loadingMaps, setLoadingMaps] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -341,19 +346,20 @@ const toggleLike = async (postid) => {
         // build weighted heatmap data, weight is number of posts in the group
         const heatData = groups.map((g) => ({
           location: new google.maps.LatLng(g.lat, g.lng),
-          weight: g.items.length,
+          weight: Math.pow(g.items.length, HEAT_WEIGHT_EXP),
         }));
 
         // custom gradient that reads well on dark maps
         const gradient = [
-          "rgba(0, 0, 0, 0)",
-          "rgba(0, 120, 255, 0.4)",
-          "rgba(0, 180, 255, 0.6)",
-          "rgba(0, 255, 200, 0.7)",
-          "rgba(120, 255, 120, 0.8)",
-          "rgba(255, 230, 0, 0.9)",
-          "rgba(255, 140, 0, 0.95)",
-          "rgba(255, 0, 0, 1.0)",
+          "rgba(0,0,0,0)",
+          "rgba(0,120,255,0.55)",
+          "rgba(0,180,255,0.75)",
+          "rgba(0,255,200,0.85)",
+          "rgba(120,255,120,0.9)",
+          "rgba(255,230,0,0.95)",
+          "rgba(255,140,0,1)",
+          "rgba(255,0,0,1)",
+          "rgba(255,255,255,1)"
         ];
 
         // create the heatmap (we will toggle visibility based on viewport density)
@@ -361,9 +367,10 @@ const toggleLike = async (postid) => {
           data: heatData,
           map: null, // start hidden; we will toggle based on viewport density
           dissipating: true,
-          radius: 28,
-          opacity: 0.6,
+          radius: HEAT_RADIUS,
+          opacity: HEAT_OPACITY,
           gradient,
+          maxIntensity: HEAT_MAX_INTENSITY,
         });
         heatmapRef.current = heatmap;
 
@@ -464,6 +471,8 @@ const toggleLike = async (postid) => {
             content: outer,
             title: g.items.length > 1 ? `${g.items.length} posts here` : `@${recent.postedby || ""}`,
           });
+          // Hide the marker element by default
+          if (mk.__hotspotsEl) mk.__hotspotsEl.style.display = "none";
 
           // Keep a reference for show/hide toggling
           mk.__hotspotsEl = outer;
@@ -514,7 +523,7 @@ function updateLayerVisibility() {
   let crowded = visibleGroups.some((g) => g.items.length >= DENSITY_THRESHOLD);
 
   const zoomLevel = DLV_MAP.getZoom() || 0;
-  const hideMarkers = (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM) || zoomLevel < ZOOM_THRESHOLD;
+  const hideMarkers = zoomLevel < ZOOM_THRESHOLD || (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM);
 
   if (heatmapRef.current) heatmapRef.current.setMap(hideMarkers ? DLV_MAP : null);
 
@@ -522,6 +531,36 @@ function updateLayerVisibility() {
     for (const m of markersRef.current) {
       const el = m.__hotspotsEl || m.content;
       if (el) el.style.display = hideMarkers ? "none" : "block";
+    }
+  }
+
+  // clickable overlays for heatmap groups
+  if (!overlaysRef.current) overlaysRef.current = [];
+  // clear existing overlays each pass
+  if (overlaysRef.current.length) {
+    for (const o of overlaysRef.current) {
+      try { o.setMap(null); } catch {}
+    }
+    overlaysRef.current = [];
+  }
+
+  if (hideMarkers) {
+    for (const g of visibleGroups) {
+      const circle = new google.maps.Circle({
+        map: DLV_MAP,
+        center: { lat: g.lat, lng: g.lng },
+        radius: CLUSTER_RADIUS_M,
+        strokeOpacity: 0,
+        fillOpacity: 0,
+        clickable: true,
+      });
+      circle.addListener("click", () => {
+        if (Array.isArray(g.items) && g.items.length > 0) {
+          setSelectedGroup(g.items);
+          setGroupIndex(0);
+        }
+      });
+      overlaysRef.current.push(circle);
     }
   }
 }
@@ -545,6 +584,14 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
         if (idleListenerRef.current) {
           google.maps.event.removeListener(idleListenerRef.current);
           idleListenerRef.current = null;
+        }
+      } catch {}
+      try {
+        if (overlaysRef.current && overlaysRef.current.length) {
+          for (const o of overlaysRef.current) {
+            try { o.setMap(null); } catch {}
+          }
+          overlaysRef.current = [];
         }
       } catch {}
       if (heatmapRef.current) {
