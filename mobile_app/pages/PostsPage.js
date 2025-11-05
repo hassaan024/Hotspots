@@ -335,8 +335,11 @@ const handleFollowToggle = async (username) => {
                 style={{
                   backgroundColor: "#1F021B",
                   marginBottom: 20,
+                  paddingTop: 10,
+                  paddingBottom: 10,
                   borderBottomWidth: 0.5,
                   borderBottomColor: "#61074E",
+                  borderRadius: 20,
                 }}
               >
                 {/* Header */}

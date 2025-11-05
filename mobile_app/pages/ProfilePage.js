@@ -440,7 +440,8 @@ export default function ProfilePage() {
               style={{
                 width: "100%",
                 maxWidth: modalMaxWidth,
-                backgroundColor: "#0B1220",
+                backgroundColor: "#301527",
+                paddingBottom: 20,
                 borderRadius: 14,
                 overflow: "hidden",
                 borderWidth: 1,
