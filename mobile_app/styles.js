@@ -2,14 +2,14 @@ import { StyleSheet } from "react-native";
 
 
 const colors = {
-  bg: "#0B0F14",          // app background
-  panel: "#121821",       // cards/panels
-  panelBorder: "#1F2937", // subtle border
+  bg: "#120206",          // app background
+  panel: "#1F021B",       // cards/panels
+  panelBorder: "#61074E", // subtle border
   text: "#E5E7EB",        // primary text
   textDim: "#9CA3AF",     // secondary text
   brand: "#60A5FA",       // blue
   accent: "#FBBF24",      // amber (active button)
-  btnBg: "#1F2937",       // inactive button
+  btnBg: "#61074E",       // inactive button
 };
 
 export const styles = StyleSheet.create({
@@ -59,7 +59,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
-    backgroundColor: "#1F2937",
+    backgroundColor: "#61074E",
   },
   navBtnActive: {
     backgroundColor: "#2a2a1f",

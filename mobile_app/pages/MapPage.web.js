@@ -655,7 +655,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
               activeOpacity={1}
               onPress={() => {}}
               style={{
-                backgroundColor: "#121821",
+                backgroundColor: "#1F021B",
                 borderRadius: 16,
                 padding: 0,
                 width: "90%",
@@ -666,7 +666,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                 borderColor: "transparent",
               }}
             >
-              <View style={[styles.postWrapper, { backgroundColor: "#121821", padding: 0 }]}>
+              <View style={[styles.postWrapper, { backgroundColor: "#1F021B", padding: 0 }]}>
                 <View style={[
                   styles.postBox,
                   { marginVertical: 0, backgroundColor: "transparent", padding: 0, borderRadius: 11, overflow: "hidden", borderWidth: 0 }
@@ -1011,7 +1011,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                         placeholderTextColor="#9CA3AF"
                         onSubmitEditing={sendComment}
                         editable={!commentSending}
-                        style={{ flex: 1, color: "#E5E7EB", backgroundColor: "#121821", borderColor: "#1F2937", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}
+                        style={{ flex: 1, color: "#E5E7EB", backgroundColor: "#1F021B", borderColor: "#61074E", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}
                       />
                       <TouchableOpacity
                         onPress={sendComment}
@@ -1038,7 +1038,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
         onRequestClose={() => setShareModalVisible(false)}
       >
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
-          <View style={{ backgroundColor: "#1F2937", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
+          <View style={{ backgroundColor: "#61074E", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
             <Text style={{ color: "#E5E7EB", fontSize: 18, fontWeight: "bold", marginBottom: 12, textAlign: "center" }}>
               Share Post
             </Text>

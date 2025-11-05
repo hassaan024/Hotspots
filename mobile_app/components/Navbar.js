@@ -28,6 +28,18 @@ export default function Navbar({ current, onChange }) {
           />
         </TouchableOpacity>
 
+        {/* NEW: Search */}
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onChange("search")}
+        >
+          <Ionicons
+            name={current === "search" ? "search" : "search-outline"}
+            size={size + 2}
+            color={current === "search" ? activeColor : inactiveColor}
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navBtn}
           onPress={() => onChange("posts")}

@@ -282,7 +282,7 @@ const handleFollowToggle = async (username) => {
                          flex: 1,
                           color: "#E5E7EB",
                           backgroundColor: "#0B1220",
-                          borderColor: "#1F2937",
+                          borderColor: "#61074E",
                           borderWidth: 1,
                           borderRadius: 10,
                           paddingHorizontal: 12,
@@ -333,10 +333,10 @@ const handleFollowToggle = async (username) => {
             return (
               <View
                 style={{
-                  backgroundColor: "#121821",
+                  backgroundColor: "#1F021B",
                   marginBottom: 20,
                   borderBottomWidth: 0.5,
-                  borderBottomColor: "#1F2937",
+                  borderBottomColor: "#61074E",
                 }}
               >
                 {/* Header */}
@@ -369,7 +369,7 @@ const handleFollowToggle = async (username) => {
                   <TouchableOpacity
                     onPress={() => handleFollowToggle(item.postedby)}
                     style={{
-                      backgroundColor: "#1F2937",
+                      backgroundColor: "#61074E",
                       paddingVertical: 5,
                       paddingHorizontal: 12,
                       borderRadius: 8,
@@ -479,7 +479,7 @@ const handleFollowToggle = async (username) => {
         >
           <View
             style={{
-              backgroundColor: "#1F2937",
+              backgroundColor: "#61074E",
               borderRadius: 12,
               padding: 20,
               width: "80%",
