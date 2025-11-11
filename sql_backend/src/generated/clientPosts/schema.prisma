@@ -29,7 +29,7 @@ model posts {
 }
 
 model Comment {
-  commentid Int           @id @map("commentid")
+  commentid Int           @id @default(autoincrement())
   postid    Int           @map("postid")
   parentid  Int?          @map("parentid")
   author    String        @map("author")
@@ -45,4 +45,13 @@ model CommentLike {
   commentId Int      @id
   username  String
   createdAt DateTime @default(now())
+}
+
+model postlikes {
+  postid    Int
+  username  String
+  createdAt DateTime @default(now())
+
+  @@id([postid, username]) // one like per user per post
+  @@index([username])
 }

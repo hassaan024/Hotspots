@@ -19,30 +19,91 @@ router.get("/", async (req, res, next) => {
     const { postedby } = req.query as { postedby?: string };
     const where = postedby ? { postedby } : undefined;
 
+    // 1) base posts — select only fields that exist in *your* model
     const posts = await postsDb.posts.findMany({
       where,
       orderBy: { postid: "desc" },
+      select: {
+        postid: true,
+        postedby: true,
+        datapath: true,
+        thumbpath: true,
+        description: true,
+        posttype: true,
+        location: true,
+        visibility: true,
+        // ⚠️ no createdAt: your schema doesn’t have it
+      },
     });
-    res.json(posts);
-  } catch (e) { next(e); }
+
+    if (posts.length === 0) return res.json([]);
+
+    const postIds = posts.map(p => p.postid);
+
+    // 2) like counts (try; if schema isn’t ready, fall back to zeros)
+    let countMap = new Map<number, number>();
+    try {
+      const countsRows = await postsDb.posts.findMany({
+        where: { postid: { in: postIds } },
+        select: {
+          postid: true,
+          _count: { select: { postlikes: true } }, // requires posts { postLikes PostLike[] }
+        },
+      });
+      countMap = new Map<number, number>(
+        countsRows.map(r => [r.postid, r._count.postlikes])
+      );
+    } catch {
+      // leave countMap empty; we’ll default to 0
+    }
+
+    const me = (req as any).user?.username || null;
+    let likedSet = new Set<number>();
+    if (me) {
+      try {
+        const mine = await postsDb.postlikes.findMany({
+          where: { username: me, postid: { in: postIds } },
+          select: { postid: true },
+        });
+        likedSet = new Set(mine.map(m => m.postid));
+      } catch {
+      }
+    }
+
+    const payload = posts.map(p => ({
+      ...p,
+      likeCount: countMap.get(p.postid) ?? 0,
+      isLiked: likedSet.has(p.postid),
+    }));
+
+    res.json(payload);
+  } catch (e: any) {
+    console.error("GET /api/posts failed:", {
+      message: e?.message,
+      code: e?.code,
+      meta: e?.meta,
+      stack: e?.stack,
+    });
+    next(e);
+  }
 });
 
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
 router.get("/locations", async (req, res) => {
   try {
-    // 1) SELECT all needed fields
     const rows = await postsDb.posts.findMany({
       select: {
         postid: true,
         postedby: true,
         location: true,   // "lat,lng" string
         datapath: true,
-        thumbpath: true,  // <-- must exist in your model
-        posttype: true,   // <-- must exist in your model
+        thumbpath: true,
+        posttype: true,
       },
     });
 
-    // 2) Map to points; validate coords
     const points = rows
       .map((r) => {
         const [a, b] = String(r.location ?? "").split(",").map((s) => s.trim());
@@ -156,10 +217,10 @@ router.post("/upload", upload.single("file"), (req, res) => {
 });
 // GET latest N comments (top-level or replies) with keyset pagination
 function authRequired(req, res, next) {
-  const u = (req as any).user;
-  if (u?.username) return next();
+  if ((req as any).user?.username) return next();
   return res.status(401).json({ error: "auth required" });
 }
+
 
 
 // Shape the comment to what the UI renders: { commentid, postid, parentid, username, text, created_at }
@@ -289,6 +350,87 @@ router.post("/:postid/comments", authRequired, async (req, res) => {
       text: created.body,
     })
   );
+});
+// routes_posts.ts
+router.post("/:postid/likes", authRequired, async (req, res) => {
+  const postid = Number(req.params.postid);
+  if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
+
+  const me = (req as any).user.username as string;
+  const { like } = (req.body ?? {}) as { like?: boolean };
+  if (typeof like !== "boolean") return res.status(400).json({ error: "like must be boolean" });
+
+  if (like) {
+    await postsDb.postlikes.upsert({
+      where: { postid_username: { postid, username: me } },
+      update: {},
+      create: { postid, username: me },
+    });
+  } else {
+    // remove if present
+    await postsDb.postlikes.deleteMany({ where: { postid, username: me } });
+  }
+
+  const [count, mine] = await Promise.all([
+    postsDb.postlikes.count({ where: { postid } }),
+    postsDb.postlikes.findUnique({ where: { postid_username: { postid, username: me } } }),
+  ]);
+
+  res.json({ postid, liked: !!mine, likeCount: count });
+});
+// routes_posts.ts
+router.post("/:postid/likes", authRequired, async (req, res) => {
+  const postid = Number(req.params.postid);
+  if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
+
+  const me = (req as any).user.username as string;
+  const { like } = (req.body ?? {}) as { like?: boolean };
+  if (typeof like !== "boolean") return res.status(400).json({ error: "like must be boolean" });
+
+  if (like) {
+    // create if missing
+    await postsDb.postLike.upsert({
+      where: { postid_username: { postid, username: me } },
+      update: {},
+      create: { postid, username: me },
+    });
+  } else {
+    // remove if present
+    await postsDb.postLike.deleteMany({ where: { postid, username: me } });
+  }
+
+  const [count, mine] = await Promise.all([
+    postsDb.postLike.count({ where: { postid } }),
+    postsDb.postLike.findUnique({ where: { postid_username: { postid, username: me } } }),
+  ]);
+
+  res.json({ postid, liked: !!mine, likeCount: count });
+});
+// routes_posts.ts
+router.post("/:postid/comments/:commentid/likes", authRequired, async (req, res) => {
+  const commentid = Number(req.params.commentid);
+  if (!Number.isFinite(commentid)) return res.status(400).json({ error: "bad commentid" });
+
+  const me = (req as any).user.username as string;
+  const { like } = (req.body ?? {}) as { like?: boolean };
+  if (typeof like !== "boolean") return res.status(400).json({ error: "like must be boolean" });
+
+  if (like) {
+    await postsDb.commentLike.upsert({
+      where: { commentid_username: { commentid, username: me } },
+      update: {},
+      create: { commentid, username: me },
+    });
+  } else {
+    await postsDb.commentLike.deleteMany({ where: { commentid, username: me } });
+  }
+
+  const [count, mine] = await Promise.all([
+    postsDb.commentLike.count({ where: { commentid } }),
+    postsDb.commentLike.findUnique({ where: { commentid_username: { commentid, username: me } } }),
+  ]);
+
+  res.json({ commentid, liked: !!mine, likeCount: count });
 });
 
 

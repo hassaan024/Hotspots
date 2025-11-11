@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import { z, ZodError } from "zod";
 import { usersDb } from "./db_users";
 import { createUserSchema, updateUserSchema, loginSchema } from "./validators";
-// import jwt from "jsonwebtoken"; // unused right now
+ import jwt from "jsonwebtoken"; // unused right now
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const router = Router();
 const safeUserSelect = { username: true, email: true } as const;
@@ -73,45 +74,42 @@ router.delete("/:username", async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   try {
-    const parsed = loginSchema.parse(req.body);
-    const username = parsed.username?.trim();
-    const password = parsed.password;
+    // 1) validate input
+    const { username: rawUser, password } = loginSchema.parse(req.body);
+    const username = rawUser?.trim();
     if (!username) return res.status(400).json({ error: "username is required" });
     if (!password) return res.status(400).json({ error: "password is required" });
 
-    const user = await usersDb.users.findUnique({ where: { username } });
-    if (!user) return res.status(401).json({ error: "Invalid username or password" });
-    const token = jwt.sign({ sub: user.username }, JWT_SECRET, { expiresIn: "7d" });
+    // 2) fetch user (include hash field; support snake or camel)
+    // select everything to avoid mismatched field names
+    const userRow = await usersDb.users.findUnique({ where: { username } });
+    if (!userRow) return res.status(401).json({ error: "Invalid username or password" });
 
     const passwordHash =
-      (user as any).passwordHash ?? (user as any).password_hash ?? null;
+      (userRow as any).passwordHash ??
+      (userRow as any).password_hash ??
+      null;
     if (!passwordHash) {
       return res.status(500).json({ error: "password hash not configured for user model" });
     }
 
+    // 3) verify password
     const ok = await bcrypt.compare(password, passwordHash);
     if (!ok) return res.status(401).json({ error: "Invalid username or password" });
 
-    // Cookie is set RIGHT HERE:
-    res.cookie("hs_user", JSON.stringify({ username: user.username }), {
-      httpOnly: true,
-      sameSite: "lax",   // for same-origin dev; use "none" + secure:true on HTTPS for cross-origin
-      secure: false,
-      path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // 4) build safe user + token
+    const token = jwt.sign({ sub: userRow.username }, JWT_SECRET, { expiresIn: "7d" });
+    const user = { username: userRow.username, email: (userRow as any).email ?? null };
 
-    const { passwordHash: _ph, password_hash: _ph2, ...safe } = (user as any);
-    return res.json(safe);
+    // 5) return payload (no cookies required)
+    return res.json({ user, token });
   } catch (err) {
     if (err instanceof ZodError) {
       return res.status(400).json({ error: "Validation error", issues: err.issues });
     }
     next(err);
   }
-
 });
-
 const usernameParam = z.object({ username: z.string().min(1).max(25) });
 
 router.post("/:username/follow", async (req: Request, res: Response) => {

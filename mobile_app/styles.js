@@ -83,8 +83,8 @@ export const styles = StyleSheet.create({
   /* Content (reserve space for navbar) */
   content: {
     flex: 1,
-    padding: 16,
-    marginBottom: 64,
+    padding: 0,
+    marginBottom: 0,
   },
 
   /* Pages */

@@ -12,7 +12,7 @@ import usersRouter from './routes_users';
 import postsRouter from './routes_posts';
 import cors from 'cors';
 import jwt from "jsonwebtoken";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET
 const WEB_ORIGIN = 'http://localhost:8081';
 const app = express();
 app.use(cors({
@@ -27,14 +27,30 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use(cookieParser());
+
+
 app.use((req, _res, next) => {
-  const h = req.header("authorization");
-  if (h?.startsWith("Bearer ")) {
+  // 1) Show what arrived
+  const auth = req.headers.authorization || null;
+  console.log("[AUTH] incoming", {
+    path: req.method + " " + req.originalUrl,
+    hasAuth: !!auth,
+    authPrefix: auth?.slice(0, 20),
+  });
+
+  // 2) Try to verify if present
+  if (auth?.startsWith("Bearer ")) {
     try {
-      const payload = jwt.verify(h.slice(7), JWT_SECRET) as any;
-      if (payload?.sub) (req as any).user = { username: String(payload.sub) };
-    } catch { /* ignore bad/expired token */ }
+      const payload: any = jwt.verify(auth.slice(7), JWT_SECRET);
+      (req as any).user = { username: String(payload.sub) };
+      console.log("[AUTH] verified", { sub: payload.sub });
+    } catch (e: any) {
+      console.log("[AUTH] verify FAILED", { msg: e?.message });
+    }
+  } else {
+    console.log("[AUTH] no bearer");
   }
+
   next();
 });
 

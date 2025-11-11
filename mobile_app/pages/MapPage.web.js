@@ -10,9 +10,13 @@ const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID = "e2597d7067e6b124501ac533";
 const DENSITY_THRESHOLD = 3;
 const CLUSTER_RADIUS_M = 100; // show heatmap when >= this many posts are visible
-const ZOOM_THRESHOLD = 9;
+const ZOOM_THRESHOLD = 17;
 
 const CROWD_HIDE_MAX_ZOOM = 14;
+const HEAT_WEIGHT_EXP = 1.4;
+const HEAT_RADIUS = 36;
+const HEAT_OPACITY = 0.8;
+const HEAT_MAX_INTENSITY = 6;
 
 
 const Uluru = { lat: -25.344, lng: 131.031 };
@@ -177,6 +181,7 @@ export default function MapPage() {
   const markersRef = useRef([]);
   const galleryRef = useRef(null);
   const idleListenerRef = useRef(null);
+  const overlaysRef = useRef([]);
   const [error, setError] = useState(null);
   const [loadingMaps, setLoadingMaps] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -195,18 +200,32 @@ export default function MapPage() {
     installAudioUnlockOnce();
   }, []);
 
-  const toggleLike = async (postid) => {
-    setLikedPosts((prev) => {
-      const already = !!prev[postid];
-      setLikeCounts((counts) => ({
-        ...counts,
-        [postid]: Math.max(0, (counts[postid] || 0) + (already ? -1 : 1)),
-      }));
-      return { ...prev, [postid]: !already };
-    });
-    const likedNow = !likedPosts[postid];
-    try { await updateLikeStatus(postid, likedNow); } catch {}
-  };
+const toggleLike = async (postid) => {
+  const prevLiked = !!likedPosts[postid];
+  const nextLiked = !prevLiked;
+
+  // optimistic
+  setLikedPosts((p) => ({ ...p, [postid]: nextLiked }));
+  setLikeCounts((counts) => ({
+    ...counts,
+    [postid]: Math.max(0, (counts[postid] || 0) + (nextLiked ? 1 : -1)),
+  }));
+
+  try {
+    const res = await updateLikeStatus(postid, nextLiked);
+    setLikedPosts((p) => ({ ...p, [postid]: !!res.liked }));
+    setLikeCounts((counts) => ({ ...counts, [postid]: res.likeCount ?? counts[postid] }));
+  } catch (e) {
+    console.error(e);
+    // rollback
+    setLikedPosts((p) => ({ ...p, [postid]: prevLiked }));
+    setLikeCounts((counts) => ({
+      ...counts,
+      [postid]: Math.max(0, (counts[postid] || 0) + (prevLiked ? 1 : -1)),
+    }));
+  }
+};
+
 
   const handleComment = async (postid) => {
     try {
@@ -327,19 +346,20 @@ export default function MapPage() {
         // build weighted heatmap data, weight is number of posts in the group
         const heatData = groups.map((g) => ({
           location: new google.maps.LatLng(g.lat, g.lng),
-          weight: g.items.length,
+          weight: Math.pow(g.items.length, HEAT_WEIGHT_EXP),
         }));
 
         // custom gradient that reads well on dark maps
         const gradient = [
-          "rgba(0, 0, 0, 0)",
-          "rgba(0, 120, 255, 0.4)",
-          "rgba(0, 180, 255, 0.6)",
-          "rgba(0, 255, 200, 0.7)",
-          "rgba(120, 255, 120, 0.8)",
-          "rgba(255, 230, 0, 0.9)",
-          "rgba(255, 140, 0, 0.95)",
-          "rgba(255, 0, 0, 1.0)",
+          "rgba(0,0,0,0)",
+          "rgba(0,120,255,0.55)",
+          "rgba(0,180,255,0.75)",
+          "rgba(0,255,200,0.85)",
+          "rgba(120,255,120,0.9)",
+          "rgba(255,230,0,0.95)",
+          "rgba(255,140,0,1)",
+          "rgba(255,0,0,1)",
+          "rgba(255,255,255,1)"
         ];
 
         // create the heatmap (we will toggle visibility based on viewport density)
@@ -347,9 +367,10 @@ export default function MapPage() {
           data: heatData,
           map: null, // start hidden; we will toggle based on viewport density
           dissipating: true,
-          radius: 28,
-          opacity: 0.6,
+          radius: HEAT_RADIUS,
+          opacity: HEAT_OPACITY,
           gradient,
+          maxIntensity: HEAT_MAX_INTENSITY,
         });
         heatmapRef.current = heatmap;
 
@@ -450,6 +471,8 @@ export default function MapPage() {
             content: outer,
             title: g.items.length > 1 ? `${g.items.length} posts here` : `@${recent.postedby || ""}`,
           });
+          // Hide the marker element by default
+          if (mk.__hotspotsEl) mk.__hotspotsEl.style.display = "none";
 
           // Keep a reference for show/hide toggling
           mk.__hotspotsEl = outer;
@@ -459,8 +482,19 @@ export default function MapPage() {
               setSelectedGroup(g.items);
               setGroupIndex(0);
             } else if (g.items.length === 1) {
-              setSelectedPost(recent);
-            }
+               const only = g.items[0];
+               // fetch full post
+               getPostWithComments(only.postid).then((full) => {
+                 setSelectedPost(full);
+                 // seed likes too, if you want:
+                 setLikedPosts((p) => ({ ...p, [full.postid]: !!full.isLiked }));
+                 setLikeCounts((c) => ({ ...c, [full.postid]: full.likeCount || 0 }));
+               }).catch(() => {
+                 // fallback to lightweight
+                 setSelectedPost(only);
+               });
+             }
+
           };
           if (mk.addListener) mk.addListener("gmp-click", open);
           outer.addEventListener("click", open);
@@ -489,7 +523,7 @@ function updateLayerVisibility() {
   let crowded = visibleGroups.some((g) => g.items.length >= DENSITY_THRESHOLD);
 
   const zoomLevel = DLV_MAP.getZoom() || 0;
-  const hideMarkers = (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM) || zoomLevel < ZOOM_THRESHOLD;
+  const hideMarkers = zoomLevel < ZOOM_THRESHOLD || (crowded && zoomLevel < CROWD_HIDE_MAX_ZOOM);
 
   if (heatmapRef.current) heatmapRef.current.setMap(hideMarkers ? DLV_MAP : null);
 
@@ -497,6 +531,36 @@ function updateLayerVisibility() {
     for (const m of markersRef.current) {
       const el = m.__hotspotsEl || m.content;
       if (el) el.style.display = hideMarkers ? "none" : "block";
+    }
+  }
+
+  // clickable overlays for heatmap groups
+  if (!overlaysRef.current) overlaysRef.current = [];
+  // clear existing overlays each pass
+  if (overlaysRef.current.length) {
+    for (const o of overlaysRef.current) {
+      try { o.setMap(null); } catch {}
+    }
+    overlaysRef.current = [];
+  }
+
+  if (hideMarkers) {
+    for (const g of visibleGroups) {
+      const circle = new google.maps.Circle({
+        map: DLV_MAP,
+        center: { lat: g.lat, lng: g.lng },
+        radius: CLUSTER_RADIUS_M,
+        strokeOpacity: 0,
+        fillOpacity: 0,
+        clickable: true,
+      });
+      circle.addListener("click", () => {
+        if (Array.isArray(g.items) && g.items.length > 0) {
+          setSelectedGroup(g.items);
+          setGroupIndex(0);
+        }
+      });
+      overlaysRef.current.push(circle);
     }
   }
 }
@@ -520,6 +584,14 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
         if (idleListenerRef.current) {
           google.maps.event.removeListener(idleListenerRef.current);
           idleListenerRef.current = null;
+        }
+      } catch {}
+      try {
+        if (overlaysRef.current && overlaysRef.current.length) {
+          for (const o of overlaysRef.current) {
+            try { o.setMap(null); } catch {}
+          }
+          overlaysRef.current = [];
         }
       } catch {}
       if (heatmapRef.current) {
@@ -546,22 +618,34 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
   }, []);
 
   return (
-    <>
-    <View style={[styles.app, { paddingTop: 10 }]}>
-      {error ? (
-        <Text style={styles.screenSub}>{error}</Text>
-      ) : (
-        <View style={styles.mapWrapper}>
-          <View ref={mapRef} style={styles.mapContainer} />
-          {loadingMaps && (
-            <View style={styles.mapLoadingOverlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.mapLoadingText}>Loading map…</Text>
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+      <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+        <View style={[styles.app, { flex: 1 }]}>
+          {error ? (
+            <Text style={styles.screenSub}>{error}</Text>
+          ) : (
+            <View style={styles.mapWrapper}>
+              <View
+                ref={mapRef}
+                style={[
+                  styles.mapContainer,
+                  {
+                    width: "100%",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    marginVertical: 20,
+                  },
+                ]}
+              />
+              {loadingMaps && (
+                <View style={styles.mapLoadingOverlay}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={styles.mapLoadingText}>Loading map…</Text>
+                </View>
+              )}
             </View>
           )}
-        </View>
-      )}
-      {selectedPost && (
+          {selectedPost && (
         <Modal
           visible={true}
           transparent={true}
@@ -671,39 +755,46 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
                       }}
                     />
                   )}
-                  <View style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                      <TouchableOpacity onPress={() => toggleLike(String(selectedPost?.postid || selectedPost?.id))}>
-                        <Ionicons
-                          name={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "heart" : "heart-outline"}
-                          size={26}
-                          color={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "#F87171" : "#E5E7EB"}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleComment(String(selectedPost?.postid || selectedPost?.id))}>
-                        <Feather name="message-circle" size={24} color="#E5E7EB" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}>
-                        <Feather name="send" size={22} color="#E5E7EB" />
-                      </TouchableOpacity>
-                    </View>
+<View style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
+  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+    <TouchableOpacity onPress={() => toggleLike(String(selectedPost?.postid || selectedPost?.id))}>
+      <Ionicons
+        name={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "heart" : "heart-outline"}
+        size={26}
+        color={likedPosts[String(selectedPost?.postid || selectedPost?.id)] ? "#F87171" : "#E5E7EB"}
+      />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => handleComment(String(selectedPost?.postid || selectedPost?.id))}>
+      <Feather name="message-circle" size={24} color="#E5E7EB" />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => { setShareTargetPost(selectedPost); setShareModalVisible(true); }}>
+      <Feather name="send" size={22} color="#E5E7EB" />
+    </TouchableOpacity>
+  </View>
 
-                    <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
-                      {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
-                    </Text>
+  <Text style={{ color: "#E5E7EB", fontWeight: "600", marginTop: 8 }}>
+    {(likeCounts[String(selectedPost?.postid || selectedPost?.id)] || 0)} likes
+  </Text>
 
-                    <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
-                      <Text style={{ fontWeight: "bold" }}>@{selectedPost.postedby || "Unknown"} </Text>
-                      {String(selectedPost?.caption || "").trim() || "(no caption)"}
-                    </Text>
-                  </View>
+  <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
+    <Text style={{ fontWeight: "bold" }}>
+      @{selectedPost?.postedby || "Unknown"}{" "}
+    </Text>
+    {String(
+      selectedPost?.description ||
+      selectedPost?.caption ||
+      ""
+    ).trim() || "(no description)"}
+  </Text>
+</View>
+
                 </View>
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
       )}
-      {selectedGroup && Array.isArray(selectedGroup) && (
+          {selectedGroup && Array.isArray(selectedGroup) && (
         <Modal
           visible={true}
           transparent={true}
@@ -841,8 +932,9 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
 
                                 <Text style={{ color: "#E5E7EB", marginTop: 6 }}>
                                   <Text style={{ fontWeight: "bold" }}>@{it.postedby || "Unknown"} </Text>
-                                  {String(it?.caption || "").trim() || "(no caption)"}
+                                  {String(it?.description || it?.caption || "").trim() || "(no description)"}
                                 </Text>
+
                               </View>
                             </View>
                             {idx < selectedGroup.length - 1 && (
@@ -868,8 +960,8 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
           </TouchableOpacity>
         </Modal>
       )}
-    </View>
-      {viewingPost && (
+        </View>
+        {viewingPost && (
         <Modal
           visible={true}
           transparent={true}
@@ -951,35 +1043,36 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
         </Modal>
       )}
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={shareModalVisible}
-        onRequestClose={() => setShareModalVisible(false)}
-      >
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
-          <View style={{ backgroundColor: "#1F2937", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
-            <Text style={{ color: "#E5E7EB", fontSize: 18, fontWeight: "bold", marginBottom: 12, textAlign: "center" }}>
-              Share Post
-            </Text>
-            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={shareModalVisible}
+          onRequestClose={() => setShareModalVisible(false)}
+        >
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
+            <View style={{ backgroundColor: "#1F2937", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
+              <Text style={{ color: "#E5E7EB", fontSize: 18, fontWeight: "bold", marginBottom: 12, textAlign: "center" }}>
+                Share Post
+              </Text>
+              {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+                <TouchableOpacity
+                  key={user}
+                  style={{ paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: "#374151" }}
+                  onPress={() => { console.log(`Shared post ${shareTargetPost?.postid || shareTargetPost?.id} with ${user}`); setShareModalVisible(false); }}
+                >
+                  <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                key={user}
-                style={{ paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: "#374151" }}
-                onPress={() => { console.log(`Shared post ${shareTargetPost?.postid || shareTargetPost?.id} with ${user}`); setShareModalVisible(false); }}
+                onPress={() => setShareModalVisible(false)}
+                style={{ marginTop: 20, alignSelf: "center", backgroundColor: "#374151", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 }}
               >
-                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+                <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={() => setShareModalVisible(false)}
-              style={{ marginTop: 20, alignSelf: "center", backgroundColor: "#374151", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 }}
-            >
-              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </>
+        </Modal>
+      </View>
+    </View>
   );
 }

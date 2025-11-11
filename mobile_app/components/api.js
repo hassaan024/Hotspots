@@ -56,7 +56,12 @@ if (!contentType.includes("application/json")) {
 
 //Posts
 export async function listPosts() {
-  const r = await fetch(`${API_BASE}/api/posts`);
+  const r = await fetch(`${API_BASE}/api/posts`, {
+    credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
+  });
   if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
   return r.json();
 }
@@ -77,7 +82,12 @@ export async function createPost(input) {
   }  return r.json();
 }
 export async function listUserPosts(username) {
-  const r = await fetch(`${API_BASE}/api/posts?postedby=${encodeURIComponent(username)}`);
+  const r = await fetch(`${API_BASE}/api/posts?postedby=${encodeURIComponent(username)}`, {
+    credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
+  });
   if (!r.ok) throw new Error(`Posts failed: ${r.status}`);
   return r.json();
 }
@@ -248,7 +258,54 @@ export async function addComment(postid, { body, parentid = null }) {
 export async function getPostWithComments(postid) {
   const r = await fetch(`${API_BASE}/api/posts/${postid}/with-comments`, {
     credentials: "include",
+    headers: {
+      ...authHeaders(),
+    },
   });
   if (!r.ok) throw new Error(`post w/ comments failed: ${r.status}`);
   return r.json();
+}
+// api.js
+export async function getPostLikeState(postid) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, { credentials: "include" });
+  if (!r.ok) throw new Error(`like state failed: ${r.status}`);
+  return r.json(); // { postid, liked, likeCount }
+}
+
+export async function updateLikeStatus(postid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/likes`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`like toggle failed: ${r.status}`);
+  return r.json();
+}
+
+export async function updateCommentLikeStatus(postid, commentid, like) {
+  const r = await fetch(`${API_BASE}/api/posts/${postid}/comments/${commentid}/likes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    credentials: "include",
+    body: JSON.stringify({ like }),
+  });
+  if (!r.ok) throw new Error(`comment like toggle failed: ${r.status}`);
+  return r.json(); // { commentid, liked, likeCount }
+}
+export async function setFollow(username, follow) {
+  const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}/follow`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ follow }),
+  });
+  if (!r.ok) throw new Error(`follow failed: ${r.status}`);
+  return r.json(); // { user, followed, followers, following }
 }
