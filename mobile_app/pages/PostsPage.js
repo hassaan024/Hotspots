@@ -20,11 +20,13 @@ import {
   getPostWithComments,
   updateLikeStatus,
   addComment,
+  setFollow,
 } from "../components/api";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
+const FEED_MAX_WIDTH = 640;
 const { width } = Dimensions.get("window");
-const imageSize = width;
+const imageSize = Math.min(width, FEED_MAX_WIDTH);
 
 const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 
@@ -65,20 +67,17 @@ function inferIsVideo(item) {
 /** Unified media renderer */
 const Media = ({ uri, poster, isVideo, size }) => {
   if (!isVideo) {
+    // Image: fill parent, cover, no stretching, respect aspect ratio
     return (
       <Image
         source={{ uri }}
-        style={{
-          width: "100%",
-          aspectRatio: 4 / 5,
-          resizeMode: "cover",
-          borderRadius: 8,
-        }}
-/>
+        style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+      />
     );
   }
 
   if (isWeb) {
+    // Video: fill parent, cover, black background, no stretching
     return (
       <video
         src={uri}
@@ -90,22 +89,27 @@ const Media = ({ uri, poster, isVideo, size }) => {
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
-        style={{ width: size, height: size, display: "block", objectFit: "contain" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          objectFit: "cover",
+          backgroundColor: "#000"
+        }}
       >
         Your browser does not support the video tag.
       </video>
     );
   }
 
+  // Native video: fill parent, cover
   return VideoComp ? (
     <VideoComp
       source={{ uri }}
-      style={{
-        width: "100%",
-        aspectRatio: 4 / 5,
-        borderRadius: 8,
-      }}
+      style={{ width: "100%", height: "100%" }}
       resizeMode="cover"
+      posterSource={poster ? { uri: poster } : undefined}
+      useNativeControls={false}
       shouldPlay
       isLooping
       isMuted
@@ -127,43 +131,76 @@ export default function PostsPage() {
   const [commentSending, setCommentSending] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await listPosts();
-      setPosts(data);
+const load = useCallback(async () => {
+  try {
+    const data = await listPosts();
+    setPosts(data);
 
-      const counts = {};
-      data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
-      setLikeCounts(counts);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+    const counts = {};
+    data.forEach((p) => (counts[p.postid] = p.likeCount || 0));
+    setLikeCounts(counts);
+
+    const liked = {};
+    data.forEach((p) => (liked[p.postid] = !!p.isLiked));
+    setLikedPosts(liked);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useEffect(() => {
     injectNoControlsCSS();
     load();
   }, [load]);
 
-  const toggleLike = async (postid) => {
-    setLikedPosts((prev) => {
-      const already = !!prev[postid];
-      setLikeCounts((counts) => ({
-        ...counts,
-        [postid]: Math.max(0, (counts[postid] || 0) + (already ? -1 : 1)),
-      }));
-      return { ...prev, [postid]: !already };
-    });
-    const likedNow = !likedPosts[postid];
-    await updateLikeStatus(postid, likedNow).catch(() => {});
-  };
+const toggleLike = async (postid) => {
+  // compute next liked state
+  const prevLiked = !!likedPosts[postid];
+  const nextLiked = !prevLiked;
 
-  const handleFollowToggle = (username) => {
-    setFollowStatus((prev) => ({ ...prev, [username]: !prev[username] }));
-  };
+  // optimistic update: likedPosts + likeCounts
+  setLikedPosts((prev) => ({ ...prev, [postid]: nextLiked }));
+  setLikeCounts((counts) => ({
+    ...counts,
+    [postid]: Math.max(0, (counts[postid] || 0) + (nextLiked ? 1 : -1)),
+  }));
+
+  try {
+    // tell the server what we want it to be
+    const res = await updateLikeStatus(postid, nextLiked);
+    // server responds with { postid, liked, likeCount }
+    setLikedPosts((prev) => ({ ...prev, [postid]: !!res.liked }));
+    setLikeCounts((counts) => ({ ...counts, [postid]: res.likeCount ?? (nextLiked ? (counts[postid] || 0) : Math.max(0, (counts[postid] || 1) - 1)) }));
+  } catch (err) {
+    console.error("like toggle failed:", err);
+    // rollback UI on error
+    setLikedPosts((prev) => ({ ...prev, [postid]: prevLiked }));
+    setLikeCounts((counts) => ({
+      ...counts,
+      [postid]: Math.max(0, (counts[postid] || 0) + (prevLiked ? 1 : -1)),
+    }));
+  }
+};
+
+
+const handleFollowToggle = async (username) => {
+  const prev = !!followStatus[username];
+  const next = !prev;
+
+  // optimistic
+  setFollowStatus((p) => ({ ...p, [username]: next }));
+
+  try {
+    await setFollow(username, next);
+  } catch (e) {
+    console.error(e);
+    // rollback on error
+    setFollowStatus((p) => ({ ...p, [username]: prev }));
+  }
+};
 
  const handleComment = async (postid) => {
    try {
@@ -207,90 +244,85 @@ export default function PostsPage() {
         : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
     return (
-      <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
-        <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
-          <ScrollView style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}>
-              <TouchableOpacity onPress={goBackToFeed}>
-                <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
-              </TouchableOpacity>
-              <Image
-                source={{ uri: profilePic }}
-                style={{ width: 38, height: 38, borderRadius: 19, marginHorizontal: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
-              />
-              <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{viewingPost.postedby}</Text>
-            </View>
-
-            {/* Media */}
-            <View style={{ backgroundColor: "#0B1220", borderRadius: 8, overflow: "hidden" }}>
-              <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
-            </View>
-
-            <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
-              <Text style={{ color: "#E5E7EB" }}>
-                <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
-                {viewingPost.description}
-              </Text>
-            </View>
-
-            <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
-              <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
-              {viewingPost.comments?.length ? (
-                viewingPost.comments.map((c) => (
-                  <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
-                    <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
-                    {c.text}
-                  </Text>
-                ))
-              ) : (
-                <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
-              )}
-              {/* Comment maker */}
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 }}>
-                <TextInput
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  placeholder="Add a comment…"
-                  placeholderTextColor="#9CA3AF"
-                  onSubmitEditing={sendComment}
-                  editable={!commentSending}
-                  style={{
-                    flex: 1,
-                    color: "#E5E7EB",
-                    backgroundColor: "#0B1220",
-                    borderColor: "#1F2937",
-                    borderWidth: 1,
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={sendComment}
-                  disabled={commentSending || !commentText.trim()}
-                  style={{
-                    backgroundColor: commentSending || !commentText.trim() ? "#374151" : "#2563EB",
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
-                    {commentSending ? "Sending…" : "Send"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
+      <ScrollView style={[styles.app, { paddingTop: 10 }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}>
+          <TouchableOpacity onPress={goBackToFeed}>
+            <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: profilePic }}
+            style={{ width: 38, height: 38, borderRadius: 19, marginHorizontal: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
+          />
+          <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{viewingPost.postedby}</Text>
         </View>
-      </View>
+
+        <View style={{ backgroundColor: "#0B1220" }}>
+          <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
+        </View>
+
+        <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
+          <Text style={{ color: "#E5E7EB" }}>
+            <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
+            {viewingPost.description}
+          </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
+          <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
+          {viewingPost.comments?.length ? (
+            viewingPost.comments.map((c) => (
+              <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
+                <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
+                {c.text}
+              </Text>
+            ))
+          ) : (
+            <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
+          )}
+                    {/* Commen maker */}
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 }}>
+                      <TextInput
+                        value={commentText}
+                       onChangeText={setCommentText}
+                        placeholder="Add a comment…"
+                        placeholderTextColor="#9CA3AF"
+                        onSubmitEditing={sendComment}
+                        editable={!commentSending}
+                        style={{
+                         flex: 1,
+                          color: "#E5E7EB",
+                          backgroundColor: "#0B1220",
+                          borderColor: "#1F2937",
+                          borderWidth: 1,
+                          borderRadius: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={sendComment}
+                        disabled={commentSending || !commentText.trim()}
+                        style={{
+                          backgroundColor: commentSending || !commentText.trim() ? "#374151" : "#2563EB",
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                          {commentSending ? "Sending…" : "Send"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+        </View>
+      </ScrollView>
     );
   }
 
   // Main feed
   return (
     <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
-      <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+      <View style={{ width: "100%", maxWidth: FEED_MAX_WIDTH, alignSelf: "center", flex: 1, backgroundColor: "#0B1220", borderRadius: 14 }}>
         {loading ? (
           <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
         ) : (
@@ -361,7 +393,17 @@ export default function PostsPage() {
                   </View>
 
                   {/* Media (image or video) */}
-                  <View style={{ backgroundColor: "#0B1220", borderRadius: 8, overflow: "hidden" }}>
+                  <View
+                    style={{
+                      width: "100%",
+                      aspectRatio: 4 / 5,
+                      backgroundColor: "#000",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      justifyContent: "center",
+                      alignItems: "center"
+                    }}
+                  >
                     <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
                   </View>
 
@@ -440,81 +482,7 @@ export default function PostsPage() {
             }
           />
         )}
-
-<<<<<<< Updated upstream
-                {/* Media (image or video) */}
-                <View style={{ backgroundColor: "#0B1220" }}>
-                  <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
-                </View>
-
-                {/* Actions */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 14,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                  }}
-                >
-                  <TouchableOpacity onPress={() => toggleLike(item.postid)}>
-                    <Ionicons
-                      name={isLiked ? "heart" : "heart-outline"}
-                      size={26}
-                      color={isLiked ? "#F87171" : "#E5E7EB"}
-                    />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={() => handleComment(item.postid)}>
-                    <Feather name="message-circle" size={24} color="#E5E7EB" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShareTargetPost(item);
-                      setShareModalVisible(true);
-                    }}
-                  >
-                    <Feather name="send" size={22} color="#E5E7EB" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Likes + Caption */}
-                <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
-                  <Text style={{ color: "#E5E7EB", marginBottom: 3, fontWeight: "600" }}>
-                    {likeCounts[item.postid] || 0} likes
-                  </Text>
-
-                  {!!item.description && (
-                    <Text style={{ color: "#E5E7EB", marginTop: 4 }}>
-                      <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            );
-          }}
-          keyExtractor={(item) => String(item.postid)}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-              tintColor="#fff"
-            />
-          }
-          ListEmptyComponent={
-            <Text style={{ color: "#9CA3AF", textAlign: "center", marginTop: 24 }}>
-              No posts yet.
-            </Text>
-          }
-        />
-      )}
-
+      </View>
       {/* Share Modal */}
       <Modal
         animationType="slide"
@@ -529,78 +497,61 @@ export default function PostsPage() {
             alignItems: "center",
             backgroundColor: "rgba(0, 0, 0, 0.7)",
           }}
-=======
-        {/* Share Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={shareModalVisible}
-          onRequestClose={() => setShareModalVisible(false)}
->>>>>>> Stashed changes
         >
           <View
             style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              backgroundColor: "#1F2937",
+              borderRadius: 12,
+              padding: 20,
+              width: "80%",
+              maxHeight: "60%",
             }}
           >
-            <View
+            <Text
               style={{
-                backgroundColor: "#1F2937",
-                borderRadius: 12,
-                padding: 20,
-                width: "80%",
-                maxHeight: "60%",
+                color: "#E5E7EB",
+                fontSize: 18,
+                fontWeight: "bold",
+                marginBottom: 12,
+                textAlign: "center",
               }}
             >
-              <Text
-                style={{
-                  color: "#E5E7EB",
-                  fontSize: 18,
-                  fontWeight: "bold",
-                  marginBottom: 12,
-                  textAlign: "center",
-                }}
-              >
-                Share Post
-              </Text>
+              Share Post
+            </Text>
 
-              {["dylan", "journey", "hassaan", "fariza"].map((user) => (
-                <TouchableOpacity
-                  key={user}
-                  style={{
-                    paddingVertical: 10,
-                    borderBottomWidth: 0.5,
-                    borderBottomColor: "#374151",
-                  }}
-                  onPress={() => {
-                    console.log(`Shared post ${shareTargetPost?.postid} with ${user}`);
-                    setShareModalVisible(false);
-                  }}
-                >
-                  <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
-                </TouchableOpacity>
-              ))}
-
+            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
               <TouchableOpacity
-                onPress={() => setShareModalVisible(false)}
+                key={user}
                 style={{
-                  marginTop: 20,
-                  alignSelf: "center",
-                  backgroundColor: "#374151",
-                  paddingHorizontal: 24,
                   paddingVertical: 10,
-                  borderRadius: 8,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: "#374151",
+                }}
+                onPress={() => {
+                  console.log(`Shared post ${shareTargetPost?.postid} with ${user}`);
+                  setShareModalVisible(false);
                 }}
               >
-                <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
+                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
               </TouchableOpacity>
-            </View>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => setShareModalVisible(false)}
+              style={{
+                marginTop: 20,
+                alignSelf: "center",
+                backgroundColor: "#374151",
+                paddingHorizontal: 24,
+                paddingVertical: 10,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 }
