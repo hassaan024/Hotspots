@@ -78,7 +78,8 @@ function getPoster(p) {
   return null;
 }
 
-const Media = ({ uri, isVideo, poster, size }) => {
+// Modified Media to accept and report aspect ratio upward
+const Media = ({ uri, isVideo, poster, size, onAspectRatio }) => {
   const [ar, setAr] = React.useState(1);
   const [muted, setMuted] = React.useState(true);
   const webVideoRef = React.useRef(null);
@@ -90,12 +91,24 @@ const Media = ({ uri, isVideo, poster, size }) => {
       Image.getSize(
         uri,
         (w, h) => {
-          if (w && h) setAr(w / h);
+          if (w && h) {
+            setAr(w / h);
+            if (onAspectRatio) onAspectRatio(w / h);
+          }
         },
         () => {}
       );
     }
   }, [uri, isVideo]);
+
+  // For video: report aspect ratio upward when it changes
+  React.useEffect(() => {
+    if (onAspectRatio && ar) {
+      onAspectRatio(ar);
+    }
+    // Only call when ar changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ar]);
 
   // WEB: unmute and ensure playback on first user interaction
   const handleWebClick = () => {
@@ -125,7 +138,7 @@ const Media = ({ uri, isVideo, poster, size }) => {
     return (
       <Image
         source={{ uri }}
-        style={{ width: size, aspectRatio: ar, resizeMode: "contain" }}
+        style={{ width: "100%", height: "100%", resizeMode: "cover" }}
       />
     );
   }
@@ -145,11 +158,18 @@ const Media = ({ uri, isVideo, poster, size }) => {
         onContextMenu={(e) => e.preventDefault()}
         onLoadedData={() => {
           try {
-            if (webVideoRef.current) webVideoRef.current.play().catch(() => {});
+            // Try to get video dimensions for aspect ratio
+            const v = webVideoRef.current;
+            if (v && v.videoWidth && v.videoHeight) {
+              const ratio = v.videoWidth / v.videoHeight;
+              setAr(ratio);
+              if (onAspectRatio) onAspectRatio(ratio);
+            }
+            if (v && v.play) v.play().catch(() => {});
           } catch {}
         }}
         onClick={handleWebClick}
-        style={{ width: size, height: "auto", display: "block", objectFit: "cover", cursor: "pointer" }}
+        style={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
       >
         Your browser does not support the video tag.
       </video>
@@ -161,12 +181,15 @@ const Media = ({ uri, isVideo, poster, size }) => {
       <VideoComp
         ref={nativeVideoRef}
         source={{ uri }}
-        style={{ width: size, height: size / ar }}
+        style={{ width: "100%", height: "100%" }}
         resizeMode="cover"
         posterSource={poster ? { uri: poster } : undefined}
         onLoad={({ naturalSize }) => {
           const w = naturalSize?.width, h = naturalSize?.height;
-          if (w && h) setAr(w / h);
+          if (w && h) {
+            setAr(w / h);
+            if (onAspectRatio) onAspectRatio(w / h);
+          }
         }}
         useNativeControls={false}
         shouldPlay
@@ -322,40 +345,96 @@ export default function ProfilePage() {
     setViewerOpen(false);
   };
 
+  // Aspect ratio state for modal video
+  const [modalVideoAR, setModalVideoAR] = useState(null);
+
   return (
-    <View style={styles.screen}>
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+    <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
       {/* header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
-          <View style={styles.headerStats}>
-            <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{posts.length}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
+      <View
+        style={{
+          backgroundColor: "#0B1220",
+          borderRadius: 14,
+          marginTop: 24,
+          marginBottom: 18,
+          paddingHorizontal: 18,
+          paddingVertical: 18,
+          width: "100%",
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={{ uri: user.avatar }}
+            style={{
+              width: 74,
+              height: 74,
+              borderRadius: 37,
+              marginRight: 16,
+              borderWidth: 2,
+              borderColor: "#181F32",
+              backgroundColor: "#181F32",
+            }}
+          />
+          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{posts.length}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Posts</Text>
             </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{followerCount}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{followerCount}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Followers</Text>
             </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{followingCount}</Text>
-              <Text style={styles.statLabel}>Following</Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{followingCount}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Following</Text>
             </View>
           </View>
         </View>
-
-        <View style={styles.nameRow}>
-          <Text style={styles.username}>{user.username}</Text>
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-            <Text style={styles.logoutBtnText}>Logout</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16 }}>
+          <Text
+            style={{
+              color: "#E5E7EB",
+              fontWeight: "bold",
+              fontSize: 17,
+              flex: 1,
+            }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {user.username}
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#181F32",
+              borderRadius: 8,
+              paddingHorizontal: 16,
+              paddingVertical: 7,
+              marginLeft: 10,
+            }}
+            onPress={logout}
+          >
+            <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>Logout</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* grid */}
-      <View style={styles.gridCard}>
+      <View
+        style={{
+          backgroundColor: "#0B1220",
+          borderRadius: 14,
+          paddingVertical: 8,
+          paddingHorizontal: 0,
+          width: "100%",
+          flex: 1,
+        }}
+      >
         {loading ? (
-          <View style={{ paddingVertical: 24 }}>
+          <View style={{ paddingVertical: 32 }}>
             <ActivityIndicator color={colors.accent} />
           </View>
         ) : (
@@ -363,7 +442,16 @@ export default function ProfilePage() {
             data={posts}
             keyExtractor={(p, idx) => String(p.postid ?? idx)}
             numColumns={3}
-            contentContainerStyle={styles.gridContainer}
+            contentContainerStyle={{
+              paddingHorizontal: 4,
+              paddingBottom: 40,
+              minHeight: 160,
+              gap: 0,
+            }}
+            columnWrapperStyle={{
+              gap: 8,
+              marginBottom: 8,
+            }}
             renderItem={({ item }) => {
               const isVideo = isVideoPost(item);
               const thumb = getThumbPath(item);
@@ -374,11 +462,28 @@ export default function ProfilePage() {
                 : toAbsUri(item.datapath);
               return (
                 <TouchableOpacity
-                  style={styles.gridItem}
-                  activeOpacity={0.9}
+                  style={{
+                    flex: 1,
+                    aspectRatio: 4 / 5,
+                    margin: 0,
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    backgroundColor: "#181F32",
+                  }}
+                  activeOpacity={0.92}
                   onPress={() => openViewer(item)}
                 >
-                  <Image source={{ uri: gridUri }} style={styles.gridImage} />
+                  <Image
+                    source={{ uri: gridUri }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      aspectRatio: 4 / 5,
+                      resizeMode: "cover",
+                      borderRadius: 6,
+                      backgroundColor: "#181F32",
+                    }}
+                  />
                 </TouchableOpacity>
               );
             }}
@@ -390,8 +495,9 @@ export default function ProfilePage() {
               <Text
                 style={{
                   textAlign: "center",
-                  paddingVertical: 24,
+                  paddingVertical: 32,
                   color: colors.textDim,
+                  fontSize: 16,
                 }}
               >
                 No posts yet
@@ -411,7 +517,7 @@ export default function ProfilePage() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.55)",
+            backgroundColor: "#000",
             justifyContent: "center",
             alignItems: "center",
             paddingHorizontal: 10,
@@ -445,7 +551,7 @@ export default function ProfilePage() {
                 overflow: "hidden",
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.03)",
-                maxHeight: "90%",
+                maxHeight: "92%",
               }}
             >
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -485,13 +591,67 @@ export default function ProfilePage() {
                 </View>
 
                 {/* media */}
-                <View style={{ backgroundColor: "#000" }}>
-                  <Media
-                    uri={toAbsUri(activePost.datapath)}
-                    isVideo={isVideoPost(activePost)}
-                    poster={getPoster(activePost)}
-                    size={modalMaxWidth}
-                  />
+                <View
+                  style={{
+                    backgroundColor: "#0B1220",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    paddingVertical: 0,
+                  }}
+                >
+                  {/* Choose aspect ratio based on media type */}
+                  {isVideoPost(activePost) ? (
+                    <View
+                    style={{
+                      width: "100%",
+                      aspectRatio:
+                        modalVideoAR && modalVideoAR > 1 ? 1 : (modalVideoAR || 9 / 16),
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      backgroundColor: "#181F32",
+                      alignSelf: "center",
+                      marginBottom: 0,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                      <Media
+                        uri={toAbsUri(activePost.datapath)}
+                        isVideo={true}
+                        poster={getPoster(activePost)}
+                        size={modalMaxWidth}
+                        onAspectRatio={setModalVideoAR}
+                      />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: "100%",
+                        aspectRatio: 4 / 5,
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        backgroundColor: "#181F32",
+                        alignSelf: "center",
+                        marginBottom: 0,
+                        overflow: "hidden",
+                        alignItems: "center",
+                        justifyContent: "center", 
+                      }}
+                    >
+                      <Image
+                        source={{ uri: toAbsUri(activePost.datapath) }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          aspectRatio: 4 / 5,
+                          resizeMode: "cover",
+                          borderRadius: 8,
+                          backgroundColor: "#181F32",
+                        }}
+                      />
+                    </View>
+                  )}
                 </View>
 
                 {/* actions */}
@@ -653,6 +813,7 @@ export default function ProfilePage() {
           )}
         </View>
       </Modal>
+      </View>
     </View>
-  );
+);
 }
