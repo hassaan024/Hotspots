@@ -100,7 +100,6 @@ export async function listLocations() {
   return r.json(); // [{ id, postedby, lat, lng, datapath, thumbpath, posttype }]
 }
 
-// add these exports
 export async function listFollowers(username) {
   const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(username)}/followers`, {
     credentials: "include",
@@ -168,7 +167,7 @@ export async function uploadImage(mediaUri, meta = {}) {
     const form = new FormData();
 
     if (isWeb) {
-      // WEB: turn blob/object URL into a File and preserve blob.type
+
       const resp = await fetch(mediaUri);
       const blob = await resp.blob();
       const ext = inferExtFromMime(blob.type) || ".bin";
@@ -176,12 +175,12 @@ export async function uploadImage(mediaUri, meta = {}) {
       const file = new File([blob], safeName, { type: blob.type || "application/octet-stream" });
       form.append(fieldName, file);
     } else {
-      // NATIVE (Expo / RN): prefer picker-provided metadata
+
       const guessedNameFromUri = (mediaUri.split("/").pop() || "").trim();
       const pickedName = meta.fileName || guessedNameFromUri || `upload-${Date.now()}`;
       const pickedMime = meta.mimeType || inferMimeFromName(pickedName) || "application/octet-stream";
 
-      // ensure the name has the proper extension for the MIME (helps server/clients)
+
       const hasExt = /\.[a-z0-9]+$/i.test(pickedName);
       const finalExt = hasExt ? "" : inferExtFromMime(pickedMime);
       const finalName = hasExt ? pickedName : `${pickedName}${finalExt || ""}`;

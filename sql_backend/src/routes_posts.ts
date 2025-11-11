@@ -19,7 +19,6 @@ router.get("/", async (req, res, next) => {
     const { postedby } = req.query as { postedby?: string };
     const where = postedby ? { postedby } : undefined;
 
-    // 1) base posts — select only fields that exist in *your* model
     const posts = await postsDb.posts.findMany({
       where,
       orderBy: { postid: "desc" },
@@ -32,7 +31,7 @@ router.get("/", async (req, res, next) => {
         posttype: true,
         location: true,
         visibility: true,
-        // ⚠️ no createdAt: your schema doesn’t have it
+
       },
     });
 
@@ -40,7 +39,7 @@ router.get("/", async (req, res, next) => {
 
     const postIds = posts.map(p => p.postid);
 
-    // 2) like counts (try; if schema isn’t ready, fall back to zeros)
+
     let countMap = new Map<number, number>();
     try {
       const countsRows = await postsDb.posts.findMany({
@@ -54,7 +53,7 @@ router.get("/", async (req, res, next) => {
         countsRows.map(r => [r.postid, r._count.postlikes])
       );
     } catch {
-      // leave countMap empty; we’ll default to 0
+
     }
 
     const me = (req as any).user?.username || null;
@@ -230,17 +229,17 @@ const toWireComment = (c: any) => ({
   parentid: c.parentid ?? c.parentId ?? null,
   username: c.author ?? c.username,           // UI expects "username"
   text: c.body ?? c.text,                     // UI expects "text"
-  created_at: c.created_at ?? c.createdAt,    // keep created_at for the app if it logs/uses it
+  created_at: c.created_at ?? c.createdAt,
 });
 
-// ---- 1) GET /api/posts/:postid/with-comments ----
+
 router.get("/:postid/with-comments", async (req, res) => {
   const postid = Number(req.params.postid);
   if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
 
   // Fetch the post
   const post = await postsDb.posts.findUnique({
-    where: { postid }, // if your Prisma model uses id instead of postid, change accordingly
+    where: { postid },
     select: {
       postid: true,
       postedby: true,
@@ -248,15 +247,15 @@ router.get("/:postid/with-comments", async (req, res) => {
       thumbpath: true,
       description: true,
       posttype: true,
-      // If you had relational mapping to users DB you could pull profilepic here.
+      // could pull profilepic here.
     },
   });
   if (!post) return res.sendStatus(404);
 
-  // Fetch top-level + replies for now (simple thread)
+
   const comments = await postsDb.comment.findMany({
     where: { postid },
-    orderBy: [{ createdAt: "asc" }, { commentid: "asc" }], // or created_at if you mapped snake_case
+    orderBy: [{ createdAt: "asc" }, { commentid: "asc" }],
     select: {
       commentid: true,
       postid: true,
@@ -278,7 +277,7 @@ router.get("/:postid/with-comments", async (req, res) => {
   });
 });
 
-// ---- 2) GET /api/posts/:postid/comments?parentid=&after_ts=&after_id=&limit=20 ----
+
 router.get("/:postid/comments", async (req, res) => {
   const postid = Number(req.params.postid);
   if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
@@ -311,11 +310,10 @@ router.get("/:postid/comments", async (req, res) => {
       username: c.author,
       text: c.body,
     })),
-    next_cursor: null, // fill in when you wire after_ts/after_id
+    next_cursor: null,
   });
 });
 
-// ---- 3) POST /api/posts/:postid/comments  { body, parentid? } ----
 router.post("/:postid/comments", authRequired, async (req, res) => {
   const postid = Number(req.params.postid);
   if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
@@ -351,7 +349,7 @@ router.post("/:postid/comments", authRequired, async (req, res) => {
     })
   );
 });
-// routes_posts.ts
+
 router.post("/:postid/likes", authRequired, async (req, res) => {
   const postid = Number(req.params.postid);
   if (!Number.isFinite(postid)) return res.status(400).json({ error: "bad postid" });
@@ -395,7 +393,6 @@ router.post("/:postid/likes", authRequired, async (req, res) => {
       create: { postid, username: me },
     });
   } else {
-    // remove if present
     await postsDb.postLike.deleteMany({ where: { postid, username: me } });
   }
 
@@ -406,7 +403,7 @@ router.post("/:postid/likes", authRequired, async (req, res) => {
 
   res.json({ postid, liked: !!mine, likeCount: count });
 });
-// routes_posts.ts
+
 router.post("/:postid/comments/:commentid/likes", authRequired, async (req, res) => {
   const commentid = Number(req.params.commentid);
   if (!Number.isFinite(commentid)) return res.status(400).json({ error: "bad commentid" });
