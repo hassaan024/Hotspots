@@ -244,137 +244,129 @@ export default function CreatePostPage() {
 
   return (
     <KeyboardAvoidingView
+      // style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}
     >
-      <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220", alignItems: "center" }}>
-        {/* Success banner */}
-        {postedBanner && (
-          <View style={styles.banner}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
-            <Text style={styles.bannerText}>Posted successfully</Text>
-          </View>
-        )}
-
-        {/* Title */}
-        <View style={styles.titleRow}>
-          <View style={styles.titleBubble}>
-            <Text style={styles.title}>Create a Post</Text>
-          </View>
+      {/* Success banner */}
+      {postedBanner && (
+        <View style={styles.banner}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
+          <Text style={styles.bannerText}>Posted successfully</Text>
         </View>
+      )}
 
-        {/* Card */}
-        <View style={styles.card}>
-          {/* Image preview with Insta gradient outline */}
-          <LinearGradient colors={ig.gradient} style={styles.previewRing}>
-            <View style={styles.previewInner}>
-              {selectedUri ? (
-                <Image
-                  source={{ uri: selectedUri }}
-                  style={[
-                    styles.previewImage,
-                    { aspectRatio: 4 / 5, resizeMode: "cover", borderRadius: 8 }
-                  ]}
-                />
-              ) : (
-                <View style={styles.previewPlaceholder}>
-                  <Ionicons name="image-outline" size={28} color={colors.textDim} />
-                  <Text style={styles.placeholderText}>No image selected</Text>
-                </View>
-              )}
-            </View>
+      {/* Title */}
+      <View style={styles.titleRow}>
+        <View style={styles.titleBubble}>
+          <Text style={styles.title}>Create a Post</Text>
+        </View>
+      </View>
+
+      {/* Card */}
+      <View style={styles.card}>
+        {/* Image preview with Insta gradient outline */}
+        <LinearGradient colors={ig.gradient} style={styles.previewRing}>
+          <View style={styles.previewInner}>
+            {selectedUri ? (
+              <Image source={{ uri: selectedUri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={colors.textDim} />
+                <Text style={styles.placeholderText}>No image selected</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
+
+        {/* Actions with faint gradient outline */}
+        <View style={styles.actionsRow}>
+          <LinearGradient colors={ig.gradientFaint} style={styles.pillRing}>
+            <TouchableOpacity style={styles.pillInner} onPress={pickImage}>
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.text} />
+              <Text style={styles.actionBtnText}>Choose Image</Text>
+            </TouchableOpacity>
           </LinearGradient>
 
-          {/* Actions with faint gradient outline */}
-          <View style={styles.actionsRow}>
-            <LinearGradient colors={ig.gradientFaint} style={styles.pillRing}>
-              <TouchableOpacity style={styles.pillInner} onPress={pickImage}>
-                <Ionicons name="cloud-upload-outline" size={18} color={colors.text} />
-                <Text style={styles.actionBtnText}>Choose Image</Text>
+          {selectedUri && (
+            <LinearGradient colors={ig.gradientFaint} style={styles.pillGhostRing}>
+              <TouchableOpacity style={styles.pillGhostInner} onPress={onClear}>
+                <Ionicons name="close-circle-outline" size={18} color={colors.textDim} />
+                <Text style={styles.actionBtnGhostText}>Clear</Text>
               </TouchableOpacity>
             </LinearGradient>
+          )}
+        </View>
 
-            {selectedUri && (
-              <LinearGradient colors={ig.gradientFaint} style={styles.pillGhostRing}>
-                <TouchableOpacity style={styles.pillGhostInner} onPress={onClear}>
-                  <Ionicons name="close-circle-outline" size={18} color={colors.textDim} />
-                  <Text style={styles.actionBtnGhostText}>Clear</Text>
-                </TouchableOpacity>
-              </LinearGradient>
+        {/* Caption with faint gradient outline */}
+        <View style={styles.captionWrap}>
+          <Text style={styles.captionLabel}>Caption</Text>
+          <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
+            <TextInput
+              value={caption}
+              onChangeText={setCaption}
+              placeholder="Write something..."
+              placeholderTextColor={colors.textDim}
+              style={styles.captionInner}
+              multiline
+              maxLength={2200}
+            />
+          </LinearGradient>
+          <Text style={styles.captionCount}>{caption.length}/2200</Text>
+        </View>
+
+        {/* Location with faint gradient outline */}
+        <View style={styles.locationWrap}>
+          <View style={styles.locationHeader}>
+            <Text style={styles.locationLabel}>Location</Text>
+            {locStatus === "fetching" && (
+              <View style={styles.locLoading}>
+                <ActivityIndicator size="small" color={colors.accent} />
+                <Text style={styles.locLoadingText}>Detecting…</Text>
+              </View>
+            )}
+            {locStatus === "error" && (
+              <Text style={styles.locErrorText}>
+                {locError || "Location unavailable"}
+              </Text>
             )}
           </View>
 
-          {/* Caption with faint gradient outline */}
-          <View style={styles.captionWrap}>
-            <Text style={styles.captionLabel}>Caption</Text>
-            <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
-              <TextInput
-                value={caption}
-                onChangeText={setCaption}
-                placeholder="Write something..."
-                placeholderTextColor={colors.textDim}
-                style={styles.captionInner}
-                multiline
-                maxLength={2200}
-              />
-            </LinearGradient>
-            <Text style={styles.captionCount}>{caption.length}/2200</Text>
-          </View>
-
-          {/* Location with faint gradient outline */}
-          <View style={styles.locationWrap}>
-            <View style={styles.locationHeader}>
-              <Text style={styles.locationLabel}>Location</Text>
-              {locStatus === "fetching" && (
-                <View style={styles.locLoading}>
-                  <ActivityIndicator size="small" color={colors.accent} />
-                  <Text style={styles.locLoadingText}>Detecting…</Text>
-                </View>
-              )}
-              {locStatus === "error" && (
-                <Text style={styles.locErrorText}>
-                  {locError || "Location unavailable"}
-                </Text>
-              )}
-            </View>
-
-            <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
-              <TextInput
-                value={locationText}
-                onChangeText={setLocationText}
-                placeholder="Location will auto-fill after image is chosen"
-                placeholderTextColor={colors.textDim}
-                style={[
-                  styles.locationInner,
-                  locStatus === "error" && styles.locationInputError,
-                ]}
-                editable={true}
-              />
-            </LinearGradient>
-
-            <Text style={styles.locationNote}>
-              Location is required to post. We auto-detect after you pick an image.
-            </Text>
-          </View>
-
-          {/* Post */}
-          <TouchableOpacity
-            style={[styles.postBtn, !canPost && styles.postBtnDisabled]}
-            onPress={onPost}
-            disabled={!canPost}
-          >
-            <Ionicons
-              name="send"
-              size={16}
-              color={canPost ? "#1b1400" : "#6b7280"}
+          <LinearGradient colors={ig.gradientFaint} style={styles.fieldRing}>
+            <TextInput
+              value={locationText}
+              onChangeText={setLocationText}
+              placeholder="Location will auto-fill after image is chosen"
+              placeholderTextColor={colors.textDim}
+              style={[
+                styles.locationInner,
+                locStatus === "error" && styles.locationInputError,
+              ]}
+              editable={true}
             />
-            <Text
-              style={[styles.postBtnText, !canPost && styles.postBtnTextDisabled]}
-            >
-              Post
-            </Text>
-          </TouchableOpacity>
+          </LinearGradient>
+
+          <Text style={styles.locationNote}>
+            Location is required to post. We auto-detect after you pick an image.
+          </Text>
         </View>
+
+        {/* Post */}
+        <TouchableOpacity
+          style={[styles.postBtn, !canPost && styles.postBtnDisabled]}
+          onPress={onPost}
+          disabled={!canPost}
+        >
+          <Ionicons
+            name="send"
+            size={16}
+            color={canPost ? "#1b1400" : "#6b7280"}
+          />
+          <Text
+            style={[styles.postBtnText, !canPost && styles.postBtnTextDisabled]}
+          >
+            Post
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );

@@ -24,8 +24,9 @@ import {
 } from "../components/api";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
+const FEED_MAX_WIDTH = 640;
 const { width } = Dimensions.get("window");
-const imageSize = width;
+const imageSize = Math.min(width, FEED_MAX_WIDTH);
 
 const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 
@@ -66,15 +67,17 @@ function inferIsVideo(item) {
 /** Unified media renderer */
 const Media = ({ uri, poster, isVideo, size }) => {
   if (!isVideo) {
+    // Image: fill parent, cover, no stretching, respect aspect ratio
     return (
       <Image
         source={{ uri }}
-        style={{ width: size, height: size, resizeMode: "cover" }}
+        style={{ width: "100%", height: "100%", resizeMode: "cover" }}
       />
     );
   }
 
   if (isWeb) {
+    // Video: fill parent, cover, black background, no stretching
     return (
       <video
         src={uri}
@@ -86,18 +89,25 @@ const Media = ({ uri, poster, isVideo, size }) => {
         controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
         disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
-        style={{ width: size, height: size, display: "block", objectFit: "contain" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          objectFit: "cover",
+          backgroundColor: "#000"
+        }}
       >
         Your browser does not support the video tag.
       </video>
     );
   }
 
+  // Native video: fill parent, cover
   return VideoComp ? (
     <VideoComp
       source={{ uri }}
-      style={{ width: size, height: size }}
-      resizeMode="contain"
+      style={{ width: "100%", height: "100%" }}
+      resizeMode="cover"
       posterSource={poster ? { uri: poster } : undefined}
       useNativeControls={false}
       shouldPlay
@@ -311,157 +321,168 @@ const handleFollowToggle = async (username) => {
 
   // Main feed
   return (
-    <View style={[styles.app, { paddingTop: 10 }]}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={({ item }) => {
-            const profilePic =
-              item.profilepic && item.profilepic !== ""
-                ? toImageUri(item.profilepic)
-                : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+      <View style={{ width: "100%", maxWidth: FEED_MAX_WIDTH, alignSelf: "center", flex: 1, backgroundColor: "#0B1220", borderRadius: 14 }}>
+        {loading ? (
+          <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
+        ) : (
+          <FlatList
+            data={posts}
+            renderItem={({ item }) => {
+              const profilePic =
+                item.profilepic && item.profilepic !== ""
+                  ? toImageUri(item.profilepic)
+                  : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
-            const isVideo = inferIsVideo(item);
-            const mediaUri = toImageUri(item.datapath);
-            const poster = item.thumbpath ? toImageUri(item.thumbpath) : undefined;
+              const isVideo = inferIsVideo(item);
+              const mediaUri = toImageUri(item.datapath);
+              const poster = item.thumbpath ? toImageUri(item.thumbpath) : undefined;
 
-            const isLiked = !!likedPosts[item.postid];
-            const isFollowing = !!followStatus[item.postedby];
+              const isLiked = !!likedPosts[item.postid];
+              const isFollowing = !!followStatus[item.postedby];
 
-            return (
-              <View
-                style={{
-                  backgroundColor: "#121821",
-                  marginBottom: 20,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: "#1F2937",
-                }}
-              >
-                {/* Header */}
+              return (
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
+                    backgroundColor: "#121821",
+                    marginBottom: 20,
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: "#1F2937",
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Image
-                      source={{ uri: profilePic }}
+                  {/* Header */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Image
+                        source={{ uri: profilePic }}
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          marginRight: 10,
+                          borderWidth: 1.5,
+                          borderColor: "#9CA3AF",
+                        }}
+                      />
+                      <TouchableOpacity onPress={() => console.log(`Clicked on @${item.postedby}`)}>
+                        <Text style={styles.username}>@{item.postedby}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleFollowToggle(item.postedby)}
                       style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 19,
-                        marginRight: 10,
-                        borderWidth: 1.5,
-                        borderColor: "#9CA3AF",
+                        backgroundColor: "#1F2937",
+                        paddingVertical: 5,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
                       }}
-                    />
-                    <TouchableOpacity onPress={() => console.log(`Clicked on @${item.postedby}`)}>
-                      <Text style={styles.username}>@{item.postedby}</Text>
+                    >
+                      <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                        {isFollowing ? "Unfollow" : "Follow"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => handleFollowToggle(item.postedby)}
+                  {/* Media (image or video) */}
+                  <View
                     style={{
-                      backgroundColor: "#1F2937",
-                      paddingVertical: 5,
-                      paddingHorizontal: 12,
+                      width: "100%",
+                      aspectRatio: 4 / 5,
+                      backgroundColor: "#000",
                       borderRadius: 8,
+                      overflow: "hidden",
+                      justifyContent: "center",
+                      alignItems: "center"
                     }}
                   >
-                    <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
-                      {isFollowing ? "Unfollow" : "Follow"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
+                  </View>
 
-                {/* Media (image or video) */}
-                <View style={{ backgroundColor: "#0B1220" }}>
-                  <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
-                </View>
-
-                {/* Actions */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 14,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                  }}
-                >
-                  <TouchableOpacity onPress={() => toggleLike(item.postid)}>
-                    <Ionicons
-                      name={isLiked ? "heart" : "heart-outline"}
-                      size={26}
-                      color={isLiked ? "#F87171" : "#E5E7EB"}
-                    />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={() => handleComment(item.postid)}>
-                    <Feather name="message-circle" size={24} color="#E5E7EB" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShareTargetPost(item);
-                      setShareModalVisible(true);
-                    }}
-                  >
-                    <Feather name="send" size={22} color="#E5E7EB" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Likes + Caption */}
-                <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
-                  <Text style={{ color: "#E5E7EB", marginBottom: 3, fontWeight: "600" }}>
-                    {likeCounts[item.postid] || 0} likes
-                  </Text>
-
-                {!!item.description && (
-                  <Text
+                  {/* Actions */}
+                  <View
                     style={{
-                      color: "#E5E7EB",
-                      marginTop: 6,
-                      fontSize: 15,
-                      lineHeight: 20,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 14,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
                     }}
                   >
-                    <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
-                    {item.description}
-                  </Text>
-                )}
+                    <TouchableOpacity onPress={() => toggleLike(item.postid)}>
+                      <Ionicons
+                        name={isLiked ? "heart" : "heart-outline"}
+                        size={26}
+                        color={isLiked ? "#F87171" : "#E5E7EB"}
+                      />
+                    </TouchableOpacity>
 
+                    <TouchableOpacity onPress={() => handleComment(item.postid)}>
+                      <Feather name="message-circle" size={24} color="#E5E7EB" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShareTargetPost(item);
+                        setShareModalVisible(true);
+                      }}
+                    >
+                      <Feather name="send" size={22} color="#E5E7EB" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Likes + Caption */}
+                  <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+                    <Text style={{ color: "#E5E7EB", marginBottom: 3, fontWeight: "600" }}>
+                      {likeCounts[item.postid] || 0} likes
+                    </Text>
+
+                  {!!item.description && (
+                    <Text
+                      style={{
+                        color: "#E5E7EB",
+                        marginTop: 6,
+                        fontSize: 15,
+                        lineHeight: 20,
+                      }}
+                    >
+                      <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
+                      {item.description}
+                    </Text>
+                  )}
+
+                  </View>
                 </View>
-              </View>
-            );
-          }}
-          keyExtractor={(item) => String(item.postid)}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-              tintColor="#fff"
-            />
-          }
-          ListEmptyComponent={
-            <Text style={{ color: "#9CA3AF", textAlign: "center", marginTop: 24 }}>
-              No posts yet.
-            </Text>
-          }
-        />
-      )}
-
+              );
+            }}
+            keyExtractor={(item) => String(item.postid)}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => {
+                  setRefreshing(true);
+                  load();
+                }}
+                tintColor="#fff"
+              />
+            }
+            ListEmptyComponent={
+              <Text style={{ color: "#9CA3AF", textAlign: "center", marginTop: 24 }}>
+                No posts yet.
+              </Text>
+            }
+          />
+        )}
+      </View>
       {/* Share Modal */}
       <Modal
         animationType="slide"

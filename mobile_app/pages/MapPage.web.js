@@ -618,22 +618,34 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
   }, []);
 
   return (
-    <>
-    <View style={[styles.app, { paddingTop: 10 }]}>
-      {error ? (
-        <Text style={styles.screenSub}>{error}</Text>
-      ) : (
-        <View style={styles.mapWrapper}>
-          <View ref={mapRef} style={styles.mapContainer} />
-          {loadingMaps && (
-            <View style={styles.mapLoadingOverlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.mapLoadingText}>Loading map…</Text>
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+      <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+        <View style={[styles.app, { flex: 1 }]}>
+          {error ? (
+            <Text style={styles.screenSub}>{error}</Text>
+          ) : (
+            <View style={styles.mapWrapper}>
+              <View
+                ref={mapRef}
+                style={[
+                  styles.mapContainer,
+                  {
+                    width: "100%",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    marginVertical: 20,
+                  },
+                ]}
+              />
+              {loadingMaps && (
+                <View style={styles.mapLoadingOverlay}>
+                  <ActivityIndicator size="large" color="#ffffff" />
+                  <Text style={styles.mapLoadingText}>Loading map…</Text>
+                </View>
+              )}
             </View>
           )}
-        </View>
-      )}
-      {selectedPost && (
+          {selectedPost && (
         <Modal
           visible={true}
           transparent={true}
@@ -782,7 +794,7 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
           </TouchableOpacity>
         </Modal>
       )}
-      {selectedGroup && Array.isArray(selectedGroup) && (
+          {selectedGroup && Array.isArray(selectedGroup) && (
         <Modal
           visible={true}
           transparent={true}
@@ -948,8 +960,8 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
           </TouchableOpacity>
         </Modal>
       )}
-    </View>
-      {viewingPost && (
+        </View>
+        {viewingPost && (
         <Modal
           visible={true}
           transparent={true}
@@ -1031,35 +1043,36 @@ idleListenerRef.current = DLV_MAP.addListener("idle", updateLayerVisibility);
         </Modal>
       )}
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={shareModalVisible}
-        onRequestClose={() => setShareModalVisible(false)}
-      >
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
-          <View style={{ backgroundColor: "#1F2937", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
-            <Text style={{ color: "#E5E7EB", fontSize: 18, fontWeight: "bold", marginBottom: 12, textAlign: "center" }}>
-              Share Post
-            </Text>
-            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={shareModalVisible}
+          onRequestClose={() => setShareModalVisible(false)}
+        >
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
+            <View style={{ backgroundColor: "#1F2937", borderRadius: 12, padding: 20, width: "80%", maxHeight: "60%" }}>
+              <Text style={{ color: "#E5E7EB", fontSize: 18, fontWeight: "bold", marginBottom: 12, textAlign: "center" }}>
+                Share Post
+              </Text>
+              {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+                <TouchableOpacity
+                  key={user}
+                  style={{ paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: "#374151" }}
+                  onPress={() => { console.log(`Shared post ${shareTargetPost?.postid || shareTargetPost?.id} with ${user}`); setShareModalVisible(false); }}
+                >
+                  <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                key={user}
-                style={{ paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: "#374151" }}
-                onPress={() => { console.log(`Shared post ${shareTargetPost?.postid || shareTargetPost?.id} with ${user}`); setShareModalVisible(false); }}
+                onPress={() => setShareModalVisible(false)}
+                style={{ marginTop: 20, alignSelf: "center", backgroundColor: "#374151", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 }}
               >
-                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+                <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={() => setShareModalVisible(false)}
-              style={{ marginTop: 20, alignSelf: "center", backgroundColor: "#374151", paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 }}
-            >
-              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </>
+        </Modal>
+      </View>
+    </View>
   );
 }
