@@ -1,0 +1,544 @@
+Index: mobile_app/pages/ProfilePage.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import React, {\n  useEffect,\n  useMemo,\n  useContext,\n  useState,\n  useCallback,\n} from \"react\";\nimport {\n  View,\n  Text,\n  Image,\n  FlatList,\n  TouchableOpacity,\n  ActivityIndicator,\n  RefreshControl,\n  Alert,\n  Modal,\n} from \"react-native\";\nimport { Ionicons } from \"@expo/vector-icons\";\nimport { BlurView } from \"expo-blur\";\nimport { styles, colors } from \"../stylesProfilePage\";\nimport { AuthContext } from \"../AuthContext\";\n\n// API imports\nimport { listUserPosts, API_BASE, getFollowCounts } from \"../components/api\";\nimport { Dimensions, Platform } from \"react-native\";\nconst { width } = Dimensions.get(\"window\");\n\nconst isWeb = typeof window !== \"undefined\" && typeof document !== \"undefined\";\nlet VideoComp = null;            // lazy for native\ntry { VideoComp = require(\"expo-av\").Video; } catch {}\n\nfunction injectNoControlsCSS() {\n  if (typeof document === \"undefined\") return;\n  if (document.getElementById(\"no-media-controls\")) return;\n  const style = document.createElement(\"style\");\n  style.id = \"no-media-controls\";\n  style.textContent = `\n    video::-webkit-media-controls-enclosure { display: none !important; }\n    video::-webkit-media-controls { display: none !important; }\n  `;\n  document.head.appendChild(style);\n}\n\n/** absolute-URI builder that mirrors your /uploads layout */\n/** Normalize any path/URL to an absolute URI without double-prefixing */\nfunction toAbsUri(path) {\n  if (!path) return null;\n  const s = String(path);\n  if (/^https?:\\/\\//i.test(s)) return s;             // already absolute\n  const base = (API_BASE || \"\").replace(/\\/$/, \"\");\n  if (s.startsWith(\"/\")) return `${base}${s}`;        // server-style absolute\n  // default: treat as relative under /uploads\n  return `${base}/uploads/${s.replace(/^\\.?\\//, \"\")}`;\n}\n\n/** Is this post a video? (posttype or extension) */\nfunction isVideoPost(p) {\n  if (p?.posttype !== undefined && Number(p.posttype) === 1) return true;\n  const name = String(p?.datapath || \"\").toLowerCase();\n  return /\\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/.test(name);\n}\n\n/** Get the best thumbnail field, handling name variants from the API */\nfunction getThumbPath(p) {\n  // check common keys in priority order\n  const k = p?.thumbpath ?? p?.thumbPath ?? p?.thumbnail ?? p?.poster;\n  return k ? String(k) : null;\n}\n\n\n/** poster to use in grid & viewer */\nfunction getPoster(p) {\n  if (p?.thumbpath) return toAbsUri(p.thumbpath);\n  if (!isVideoPost(p)) return toAbsUri(p?.datapath); // image post: use itself\n  return null; // video with no thumb available\n}\n\n/** unified media renderer */\nconst Media = ({ uri, isVideo, poster, size }) => {\nconst [ar, setAr] = React.useState(1); // aspect ratio = width/height\n\n// when it's an IMAGE, measure it once and set ar\nReact.useEffect(() => {\n  if (!isVideo && uri) {\n    Image.getSize(uri, (w, h) => { if (w && h) setAr(w / h); }, () => {});\n  }\n}, [uri, isVideo]);\n\n// when it's a VIDEO (native), grab natural size from onLoad\nconst onVideoLoad = (status) => {\n  const ns = status?.naturalSize;\n  const w = ns?.width, h = ns?.height;\n  if (w && h) setAr(w / h);\n};\n\n// IMAGE render (width fixed, height derived by aspectRatio)\nif (!isVideo) {\n  return (\n    <Image\n      source={{ uri }}\n      style={{ width: size, aspectRatio: ar, resizeMode: \"contain\" }} // ⬅\uFE0F no fixed height\n    />\n  );\n}\n\n// WEB VIDEO (let the browser compute height)\nif (isWeb) {\n  return (\n    <video\n      src={uri}\n      poster={poster || undefined}\n      playsInline\n      autoPlay\n      muted\n      loop\n      controlsList=\"nodownload noplaybackrate noremoteplayback nofullscreen\"\n      disablePictureInPicture\n      onContextMenu={(e) => e.preventDefault()}\n      style={{ width: size, height: \"auto\", display: \"block\", objectFit: \"cover\" }}\n    >\n      Your browser does not support the video tag.\n    </video>\n  );\n}\n\n// NATIVE VIDEO (expo-av) – compute height from ar after onLoad\nreturn VideoComp ? (\n  <VideoComp\n    source={{ uri }}\n    style={{ width: size, height: size / ar }}\n    resizeMode=\"cover\"\n    posterSource={poster ? { uri: poster } : undefined}\n    onLoad={({ naturalSize }) => {\n      const w = naturalSize?.width, h = naturalSize?.height;\n      if (w && h) setAr(w / h);\n    }}\n    useNativeControls={false}\n    shouldPlay\n    isLooping\n    isMuted\n  />\n) : null;\n};\n\n\n\nexport default function ProfilePage() {\n  const { logout, user: authUser } = useContext(AuthContext);\n\n  const user = useMemo(\n    () => ({\n      username: authUser?.username,\n      avatar: authUser?.avatar ?? \"https://placehold.co/200x200/png\",\n      postsCount: 0,\n    }),\n    [authUser]\n  );\n\n  const [posts, setPosts] = useState([]);\n  const [loading, setLoading] = useState(true);\n  const [refreshing, setRefreshing] = useState(false);\n  const [followerCount, setFollowerCount] = useState(0);\n  const [followingCount, setFollowingCount] = useState(0);\n\n  // Viewer state (stores direct URI instead of full post)\nconst [viewerOpen, setViewerOpen] = useState(false);\nconst [viewerUri, setViewerUri] = useState(null);\nconst [viewerPoster,  setViewerPoster]  = useState(null);\nconst [viewerIsVideo, setViewerIsVideo] = useState(false);\nconst [viewerLoading, setViewerLoading] = useState(true);\n\n\n  // Build the image URL exactly like the grid uses\n// Build the media URL from post object (image or video)\nconst postToUri = (p) => {\n  const path = Number(p?.posttype) === 1 ? (p?.datapath) : p?.datapath;\n  return toAbsUri(path);\n};\n\n\n\n  const fetchPosts = useCallback(async () => {\n    try {\n      setLoading(true);\n      const arr = await listUserPosts(user.username);\n      setPosts(arr || []);\n    } catch (e) {\n      console.error(e);\n      Alert.alert(\"Couldn’t load posts\", e?.message ?? \"Unknown error\");\n    } finally {\n      setLoading(false);\n    }\n  }, [user.username]);\n\n  const fetchFollowCounts = useCallback(async () => {\n    try {\n      const { followers, following } = await getFollowCounts(user.username);\n      setFollowerCount(followers);\n      setFollowingCount(following);\n    } catch (e) {\n      console.error(e);\n      // ignore silently for now\n    }\n  }, [user.username]);\n\n  useEffect(() => {\n    injectNoControlsCSS();\n    fetchPosts();\n    fetchFollowCounts();\n  }, [fetchPosts, fetchFollowCounts]);\n\n  const onRefresh = useCallback(async () => {\n    setRefreshing(true);\n    try {\n      await Promise.all([fetchPosts(), fetchFollowCounts()]);\n    } finally {\n      setRefreshing(false);\n    }\n  }, [fetchPosts, fetchFollowCounts]);\n\n  // Viewer\n\nconst openViewer = (post) => {\n  const isVid = isVideoPost(post);\n  const mediaUri = toAbsUri(post?.datapath);          // play the real media\n  if (!mediaUri) return;\n\n  const posterPath = getThumbPath(post);\n  setViewerUri(mediaUri);\n  setViewerIsVideo(isVid);\n  setViewerPoster(posterPath ? toAbsUri(posterPath) : null);\n  setViewerLoading(true);\n  setViewerOpen(true);\n};\n\n\n  const closeViewer = () => {\n    setViewerOpen(false);\n    setViewerUri(null);\n    setViewerLoading(true);\n  };\n\n  return (\n    <View style={styles.screen}>\n      {/* Header Card */}\n      <View style={styles.headerCard}>\n        <View style={styles.headerRow}>\n          <Image source={{ uri: user.avatar }} style={styles.avatar} />\n          <View style={styles.headerStats}>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{posts.length}</Text>\n              <Text style={styles.statLabel}>Posts</Text>\n            </View>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{followerCount}</Text>\n              <Text style={styles.statLabel}>Followers</Text>\n            </View>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{followingCount}</Text>\n              <Text style={styles.statLabel}>Following</Text>\n            </View>\n          </View>\n        </View>\n\n        <View style={styles.nameRow}>\n          <Text style={styles.username}>{user.username}</Text>\n          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>\n            <Text style={styles.logoutBtnText}>Logout</Text>\n          </TouchableOpacity>\n        </View>\n      </View>\n\n      {/* Grid Card */}\n      <View style={styles.gridCard}>\n        {loading ? (\n          <View style={{ paddingVertical: 24 }}>\n            <ActivityIndicator color={colors.accent} />\n          </View>\n        ) : (\n          <FlatList\n            data={posts}\n            keyExtractor={(p, idx) => String(p.postid ?? idx)}\n            numColumns={3}\n            contentContainerStyle={styles.gridContainer}\nrenderItem={({ item }) => {\n  const isVideo = isVideoPost(item);\n  const thumb = getThumbPath(item);\n  const gridUri = isVideo\n    ? (thumb ? toAbsUri(thumb) : toAbsUri(item.datapath)) // prefer thumb for video\n    : toAbsUri(item.datapath);                            // images use their own path\n  return (\n    <TouchableOpacity\n      style={styles.gridItem}\n      activeOpacity={0.9}\n      onPress={() => openViewer(item)}\n    >\n      <Image source={{ uri: gridUri }} style={styles.gridImage} />\n    </TouchableOpacity>\n  );\n}}\n            showsVerticalScrollIndicator={false}\n            refreshControl={\n              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />\n            }\n            ListEmptyComponent={\n              <Text style={{ textAlign: \"center\", paddingVertical: 24, color: colors.textDim }}>\n                No posts yet\n              </Text>\n            }\n          />\n        )}\n      </View>\n\n      {/* Fullscreen Viewer Modal */}\n      <Modal\n        visible={viewerOpen}\n        onRequestClose={closeViewer}\n        animationType=\"fade\"\n        transparent\n      >\n        <View style={styles.viewerOverlay}>\n          {/* Blur background at back */}\n          <BlurView intensity={40} tint=\"dark\" style={styles.viewerBlur} />\n\n          {/* Close button */}\n          <TouchableOpacity style={styles.viewerCloseBtn} onPress={closeViewer}>\n            <Ionicons name=\"close\" size={22} color={colors.text} />\n          </TouchableOpacity>\n\n          {/* Add image functionality here  */}\n          {/* Image container */}\n<View style={styles.viewerCard}>\n  {viewerUri ? (\n    <Media uri={viewerUri} isVideo={viewerIsVideo} poster={viewerPoster} size={Dimensions.get(\"window\").width} />\n  ) : (\n    <Text style={{ color: colors.textDim, padding: 12 }}>No media</Text>\n  )}\n</View>\n\n          {/* Actions row (Like / Comment / Share) */}\n          <View style={styles.viewerActions}>\n            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>\n              <Ionicons name=\"heart-outline\" size={24} color={colors.text} />\n            </TouchableOpacity>\n            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>\n              <Ionicons name=\"chatbubble-outline\" size={24} color={colors.text} />\n            </TouchableOpacity>\n            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>\n              <Ionicons name=\"paper-plane-outline\" size={24} color={colors.text} />\n            </TouchableOpacity>\n          </View>\n        </View>\n      </Modal>\n    </View>\n  );\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mobile_app/pages/ProfilePage.js b/mobile_app/pages/ProfilePage.js
+--- a/mobile_app/pages/ProfilePage.js	(revision e0ed1cb63e938fe3706baa87ec17482efc31a277)
++++ b/mobile_app/pages/ProfilePage.js	(date 1761848073965)
+@@ -13,22 +13,23 @@
+   TouchableOpacity,
+   ActivityIndicator,
+   RefreshControl,
+-  Alert,
+   Modal,
++  TextInput,
++  Alert,
+ } from "react-native";
+-import { Ionicons } from "@expo/vector-icons";
++import { Ionicons, Feather } from "@expo/vector-icons";
+ import { BlurView } from "expo-blur";
+ import { styles, colors } from "../stylesProfilePage";
+ import { AuthContext } from "../AuthContext";
+-
+-// API imports
+ import { listUserPosts, API_BASE, getFollowCounts } from "../components/api";
+-import { Dimensions, Platform } from "react-native";
++import { Dimensions } from "react-native";
++
+ const { width } = Dimensions.get("window");
+-
+ const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
+-let VideoComp = null;            // lazy for native
+-try { VideoComp = require("expo-av").Video; } catch {}
++let VideoComp = null;
++try {
++  VideoComp = require("expo-av").Video;
++} catch {}
+ 
+ function injectNoControlsCSS() {
+   if (typeof document === "undefined") return;
+@@ -42,117 +43,87 @@
+   document.head.appendChild(style);
+ }
+ 
+-/** absolute-URI builder that mirrors your /uploads layout */
+-/** Normalize any path/URL to an absolute URI without double-prefixing */
+ function toAbsUri(path) {
+   if (!path) return null;
+   const s = String(path);
+-  if (/^https?:\/\//i.test(s)) return s;             // already absolute
++  if (/^https?:\/\//i.test(s)) return s;
+   const base = (API_BASE || "").replace(/\/$/, "");
+-  if (s.startsWith("/")) return `${base}${s}`;        // server-style absolute
+-  // default: treat as relative under /uploads
++  if (s.startsWith("/")) return `${base}${s}`;
+   return `${base}/uploads/${s.replace(/^\.?\//, "")}`;
+ }
+ 
+-/** Is this post a video? (posttype or extension) */
+ function isVideoPost(p) {
+   if (p?.posttype !== undefined && Number(p.posttype) === 1) return true;
+   const name = String(p?.datapath || "").toLowerCase();
+   return /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/.test(name);
+ }
+ 
+-/** Get the best thumbnail field, handling name variants from the API */
+ function getThumbPath(p) {
+-  // check common keys in priority order
+-  const k = p?.thumbpath ?? p?.thumbPath ?? p?.thumbnail ?? p?.poster;
+-  return k ? String(k) : null;
++  return p?.thumbpath ?? p?.thumbPath ?? p?.thumbnail ?? p?.poster ?? null;
+ }
+ 
+-
+-/** poster to use in grid & viewer */
+ function getPoster(p) {
+   if (p?.thumbpath) return toAbsUri(p.thumbpath);
+-  if (!isVideoPost(p)) return toAbsUri(p?.datapath); // image post: use itself
+-  return null; // video with no thumb available
++  if (!isVideoPost(p)) return toAbsUri(p?.datapath);
++  return null;
+ }
+ 
+-/** unified media renderer */
+ const Media = ({ uri, isVideo, poster, size }) => {
+-const [ar, setAr] = React.useState(1); // aspect ratio = width/height
+-
+-// when it's an IMAGE, measure it once and set ar
+-React.useEffect(() => {
+-  if (!isVideo && uri) {
+-    Image.getSize(uri, (w, h) => { if (w && h) setAr(w / h); }, () => {});
+-  }
+-}, [uri, isVideo]);
+-
+-// when it's a VIDEO (native), grab natural size from onLoad
+-const onVideoLoad = (status) => {
+-  const ns = status?.naturalSize;
+-  const w = ns?.width, h = ns?.height;
+-  if (w && h) setAr(w / h);
+-};
++  const [ar, setAr] = React.useState(1);
++  React.useEffect(() => {
++    if (!isVideo && uri) {
++      Image.getSize(uri, (w, h) => {
++        if (w && h) setAr(w / h);
++      });
++    }
++  }, [uri, isVideo]);
+ 
+-// IMAGE render (width fixed, height derived by aspectRatio)
+-if (!isVideo) {
+-  return (
+-    <Image
+-      source={{ uri }}
+-      style={{ width: size, aspectRatio: ar, resizeMode: "contain" }} // ⬅️ no fixed height
+-    />
+-  );
+-}
++  if (!isVideo)
++    return (
++      <Image
++        source={{ uri }}
++        style={{ width: size, aspectRatio: ar, resizeMode: "contain" }}
++      />
++    );
+ 
+-// WEB VIDEO (let the browser compute height)
+-if (isWeb) {
+-  return (
+-    <video
+-      src={uri}
+-      poster={poster || undefined}
+-      playsInline
+-      autoPlay
+-      muted
+-      loop
+-      controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+-      disablePictureInPicture
+-      onContextMenu={(e) => e.preventDefault()}
+-      style={{ width: size, height: "auto", display: "block", objectFit: "cover" }}
+-    >
+-      Your browser does not support the video tag.
+-    </video>
+-  );
+-}
++  if (isWeb)
++    return (
++      <video
++        src={uri}
++        poster={poster || undefined}
++        playsInline
++        autoPlay
++        muted
++        loop
++        style={{
++          width: size,
++          height: "auto",
++          display: "block",
++          objectFit: "cover",
++        }}
++      />
++    );
+ 
+-// NATIVE VIDEO (expo-av) – compute height from ar after onLoad
+-return VideoComp ? (
+-  <VideoComp
+-    source={{ uri }}
+-    style={{ width: size, height: size / ar }}
+-    resizeMode="cover"
+-    posterSource={poster ? { uri: poster } : undefined}
+-    onLoad={({ naturalSize }) => {
+-      const w = naturalSize?.width, h = naturalSize?.height;
+-      if (w && h) setAr(w / h);
+-    }}
+-    useNativeControls={false}
+-    shouldPlay
+-    isLooping
+-    isMuted
+-  />
+-) : null;
++  return VideoComp ? (
++    <VideoComp
++      source={{ uri }}
++      style={{ width: size, height: size / ar }}
++      resizeMode="cover"
++      posterSource={poster ? { uri: poster } : undefined}
++      useNativeControls={false}
++      shouldPlay
++      isLooping
++      isMuted
++    />
++  ) : null;
+ };
+ 
+-
+-
+ export default function ProfilePage() {
+   const { logout, user: authUser } = useContext(AuthContext);
+-
+   const user = useMemo(
+     () => ({
+       username: authUser?.username,
+       avatar: authUser?.avatar ?? "https://placehold.co/200x200/png",
+-      postsCount: 0,
+     }),
+     [authUser]
+   );
+@@ -163,22 +134,16 @@
+   const [followerCount, setFollowerCount] = useState(0);
+   const [followingCount, setFollowingCount] = useState(0);
+ 
+-  // Viewer state (stores direct URI instead of full post)
+-const [viewerOpen, setViewerOpen] = useState(false);
+-const [viewerUri, setViewerUri] = useState(null);
+-const [viewerPoster,  setViewerPoster]  = useState(null);
+-const [viewerIsVideo, setViewerIsVideo] = useState(false);
+-const [viewerLoading, setViewerLoading] = useState(true);
+-
++  const [viewerOpen, setViewerOpen] = useState(false);
++  const [viewerUri, setViewerUri] = useState(null);
++  const [viewerPoster, setViewerPoster] = useState(null);
++  const [viewerIsVideo, setViewerIsVideo] = useState(false);
++  const [viewerPost, setViewerPost] = useState(null);
+ 
+-  // Build the image URL exactly like the grid uses
+-// Build the media URL from post object (image or video)
+-const postToUri = (p) => {
+-  const path = Number(p?.posttype) === 1 ? (p?.datapath) : p?.datapath;
+-  return toAbsUri(path);
+-};
+-
+-
++  const [optionsVisible, setOptionsVisible] = useState(false);
++  const [confirmVisible, setConfirmVisible] = useState(false);
++  const [editVisible, setEditVisible] = useState(false);
++  const [editText, setEditText] = useState("");
+ 
+   const fetchPosts = useCallback(async () => {
+     try {
+@@ -186,7 +151,6 @@
+       const arr = await listUserPosts(user.username);
+       setPosts(arr || []);
+     } catch (e) {
+-      console.error(e);
+       Alert.alert("Couldn’t load posts", e?.message ?? "Unknown error");
+     } finally {
+       setLoading(false);
+@@ -198,10 +162,7 @@
+       const { followers, following } = await getFollowCounts(user.username);
+       setFollowerCount(followers);
+       setFollowingCount(following);
+-    } catch (e) {
+-      console.error(e);
+-      // ignore silently for now
+-    }
++    } catch {}
+   }, [user.username]);
+ 
+   useEffect(() => {
+@@ -219,31 +180,53 @@
+     }
+   }, [fetchPosts, fetchFollowCounts]);
+ 
+-  // Viewer
+-
+-const openViewer = (post) => {
+-  const isVid = isVideoPost(post);
+-  const mediaUri = toAbsUri(post?.datapath);          // play the real media
+-  if (!mediaUri) return;
+-
+-  const posterPath = getThumbPath(post);
+-  setViewerUri(mediaUri);
+-  setViewerIsVideo(isVid);
+-  setViewerPoster(posterPath ? toAbsUri(posterPath) : null);
+-  setViewerLoading(true);
+-  setViewerOpen(true);
+-};
++  const openViewer = (post) => {
++    const isVid = isVideoPost(post);
++    const mediaUri = toAbsUri(post?.datapath);
++    if (!mediaUri) return;
++    const posterPath = getThumbPath(post);
++    setViewerUri(mediaUri);
++    setViewerIsVideo(isVid);
++    setViewerPoster(posterPath ? toAbsUri(posterPath) : null);
++    setViewerPost(post);
++    setViewerOpen(true);
++  };
+ 
+-
+   const closeViewer = () => {
+     setViewerOpen(false);
+     setViewerUri(null);
+-    setViewerLoading(true);
++    setViewerPost(null);
++  };
++
++  const handleEdit = (post) => {
++    setOptionsVisible(false);
++    setEditText(post?.caption || "");
++    setEditVisible(true);
++  };
++
++  const saveEdit = () => {
++    setPosts((prev) =>
++      prev.map((p) =>
++        p.postid === viewerPost.postid ? { ...p, caption: editText } : p
++      )
++    );
++    setEditVisible(false);
++  };
++
++  const handleDeletePress = () => {
++    setOptionsVisible(false);
++    setConfirmVisible(true);
++  };
++
++  const confirmDelete = async () => {
++    setConfirmVisible(false);
++    setPosts((prev) => prev.filter((p) => p.postid !== viewerPost.postid));
++    closeViewer();
+   };
+ 
+   return (
+     <View style={styles.screen}>
+-      {/* Header Card */}
++      {/* Header */}
+       <View style={styles.headerCard}>
+         <View style={styles.headerRow}>
+           <Image source={{ uri: user.avatar }} style={styles.avatar} />
+@@ -271,7 +254,7 @@
+         </View>
+       </View>
+ 
+-      {/* Grid Card */}
++      {/* Grid */}
+       <View style={styles.gridCard}>
+         {loading ? (
+           <View style={{ paddingVertical: 24 }}>
+@@ -283,72 +266,151 @@
+             keyExtractor={(p, idx) => String(p.postid ?? idx)}
+             numColumns={3}
+             contentContainerStyle={styles.gridContainer}
+-renderItem={({ item }) => {
+-  const isVideo = isVideoPost(item);
+-  const thumb = getThumbPath(item);
+-  const gridUri = isVideo
+-    ? (thumb ? toAbsUri(thumb) : toAbsUri(item.datapath)) // prefer thumb for video
+-    : toAbsUri(item.datapath);                            // images use their own path
+-  return (
+-    <TouchableOpacity
+-      style={styles.gridItem}
+-      activeOpacity={0.9}
+-      onPress={() => openViewer(item)}
+-    >
+-      <Image source={{ uri: gridUri }} style={styles.gridImage} />
+-    </TouchableOpacity>
+-  );
+-}}
+-            showsVerticalScrollIndicator={false}
+-            refreshControl={
+-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+-            }
+-            ListEmptyComponent={
+-              <Text style={{ textAlign: "center", paddingVertical: 24, color: colors.textDim }}>
+-                No posts yet
+-              </Text>
+-            }
++            showsVerticalScrollIndicator={false}
++            refreshControl={
++              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
++            }
++            renderItem={({ item }) => {
++              const isVideo = isVideoPost(item);
++              const thumb = getThumbPath(item);
++              const gridUri = isVideo
++                ? thumb
++                  ? toAbsUri(thumb)
++                  : toAbsUri(item.datapath)
++                : toAbsUri(item.datapath);
++              return (
++                <TouchableOpacity
++                  style={styles.gridItem}
++                  activeOpacity={0.9}
++                  onPress={() => openViewer(item)}
++                >
++                  <Image source={{ uri: gridUri }} style={styles.gridImage} />
++                </TouchableOpacity>
++              );
++            }}
+           />
+         )}
+       </View>
+ 
+-      {/* Fullscreen Viewer Modal */}
+-      <Modal
+-        visible={viewerOpen}
+-        onRequestClose={closeViewer}
+-        animationType="fade"
+-        transparent
+-      >
++      {/* Viewer Modal */}
++      <Modal visible={viewerOpen} onRequestClose={closeViewer} transparent>
+         <View style={styles.viewerOverlay}>
+-          {/* Blur background at back */}
+           <BlurView intensity={40} tint="dark" style={styles.viewerBlur} />
+-
+-          {/* Close button */}
+-          <TouchableOpacity style={styles.viewerCloseBtn} onPress={closeViewer}>
++          <TouchableOpacity
++            style={styles.viewerCloseBtn}
++            onPress={closeViewer}
++          >
+             <Ionicons name="close" size={22} color={colors.text} />
+           </TouchableOpacity>
+-
+-          {/* Add image functionality here  */}
+-          {/* Image container */}
+-<View style={styles.viewerCard}>
+-  {viewerUri ? (
+-    <Media uri={viewerUri} isVideo={viewerIsVideo} poster={viewerPoster} size={Dimensions.get("window").width} />
+-  ) : (
+-    <Text style={{ color: colors.textDim, padding: 12 }}>No media</Text>
+-  )}
+-</View>
+-
+-          {/* Actions row (Like / Comment / Share) */}
++          <View style={styles.viewerCard}>
++            {viewerUri ? (
++              <Media
++                uri={viewerUri}
++                isVideo={viewerIsVideo}
++                poster={viewerPoster}
++                size={width}
++              />
++            ) : null}
++          </View>
+           <View style={styles.viewerActions}>
+-            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>
++            <TouchableOpacity style={styles.viewerIconBtn}>
+               <Ionicons name="heart-outline" size={24} color={colors.text} />
+             </TouchableOpacity>
+-            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>
++            <TouchableOpacity style={styles.viewerIconBtn}>
+               <Ionicons name="chatbubble-outline" size={24} color={colors.text} />
+             </TouchableOpacity>
+-            <TouchableOpacity style={styles.viewerIconBtn} activeOpacity={0.8}>
++            <TouchableOpacity style={styles.viewerIconBtn}>
+               <Ionicons name="paper-plane-outline" size={24} color={colors.text} />
+             </TouchableOpacity>
++            <TouchableOpacity
++              style={[styles.viewerIconBtn, styles.viewerOptionsInline]}
++              onPress={() => setOptionsVisible(true)}
++            >
++              <Feather name="more-vertical" size={22} color={colors.text} />
++            </TouchableOpacity>
++          </View>
++        </View>
++      </Modal>
++
++      {/* Options Modal */}
++      <Modal visible={optionsVisible} transparent animationType="fade">
++        <View style={styles.modalOverlay}>
++          <View style={styles.modalContainer}>
++            <TouchableOpacity
++              style={styles.modalOption}
++              onPress={() => handleEdit(viewerPost)}
++            >
++              <Text style={styles.modalText}>Edit Caption</Text>
++            </TouchableOpacity>
++            <TouchableOpacity
++              style={[styles.modalOption, { borderBottomWidth: 0 }]}
++              onPress={handleDeletePress}
++            >
++              <Text style={[styles.modalText, { color: "#EF4444" }]}>
++                Delete Post
++              </Text>
++            </TouchableOpacity>
++            <TouchableOpacity
++              style={styles.modalCancel}
++              onPress={() => setOptionsVisible(false)}
++            >
++              <Text style={styles.modalCancelText}>Cancel</Text>
++            </TouchableOpacity>
++          </View>
++        </View>
++      </Modal>
++
++      {/* Edit Caption Modal */}
++      <Modal visible={editVisible} transparent animationType="fade">
++        <View style={styles.confirmOverlay}>
++          <View style={styles.confirmBox}>
++            <Text style={styles.confirmText}>Edit Caption</Text>
++            <TextInput
++              style={styles.editInput}
++              value={editText}
++              onChangeText={setEditText}
++              placeholder="Enter new caption..."
++              placeholderTextColor={colors.textDim}
++            />
++            <View style={styles.confirmActions}>
++              <TouchableOpacity
++                style={[styles.confirmBtn, { backgroundColor: colors.accent }]}
++                onPress={saveEdit}
++              >
++                <Text style={styles.confirmBtnText}>Save</Text>
++              </TouchableOpacity>
++              <TouchableOpacity
++                style={[styles.confirmBtn, { backgroundColor: colors.btnBg }]}
++                onPress={() => setEditVisible(false)}
++              >
++                <Text style={styles.confirmBtnText}>Cancel</Text>
++              </TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
++
++      {/* Confirm Delete */}
++      <Modal visible={confirmVisible} transparent animationType="fade">
++        <View style={styles.confirmOverlay}>
++          <View style={styles.confirmBox}>
++            <Text style={styles.confirmText}>
++              Are you sure you want to delete this post?
++            </Text>
++            <View style={styles.confirmActions}>
++              <TouchableOpacity
++                style={[styles.confirmBtn, { backgroundColor: "#EF4444" }]}
++                onPress={confirmDelete}
++              >
++                <Text style={styles.confirmBtnText}>Yes</Text>
++              </TouchableOpacity>
++              <TouchableOpacity
++                style={[styles.confirmBtn, { backgroundColor: colors.btnBg }]}
++                onPress={() => setConfirmVisible(false)}
++              >
++                <Text style={styles.confirmBtnText}>Cancel</Text>
++              </TouchableOpacity>
++            </View>
+           </View>
+         </View>
+       </Modal>

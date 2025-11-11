@@ -1,0 +1,279 @@
+Index: mobile_app/pages/ProfilePage.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import React, { useEffect, useMemo, useContext, useState, useCallback } from \"react\";\nimport { View, Text, Image, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from \"react-native\";\nimport { styles } from \"../stylesProfilePage\";\nimport { AuthContext } from \"../AuthContext\";\n\n//API imports\nimport { listUserPosts, API_BASE , getFollowCounts } from \"../components/api\";\nexport default function ProfilePage() {\n  const { logout, user: authUser } = useContext(AuthContext);\n  const user = useMemo(\n    () => ({\n      username: authUser?.username,\n      avatar: authUser?.avatar ?? \"https://placehold.co/200x200/png\",\n      postsCount: 0,\n    }),\n    [authUser]\n  );\n\n    const [posts, setPosts] = useState([]);\n      const [loading, setLoading] = useState(true);\n  const [refreshing, setRefreshing] = useState(false);\n  const [followerCount, setFollowerCount] = useState(0);\n  const [followingCount, setFollowingCount] = useState(0);\n\nconst toImageUri = (p) => {\n  const path =\n    Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath;\n  if (!path) return null;\n  const base = (API_BASE || \"\").replace(/\\/$/, \"\");\n  const rel = String(path).replace(/^\\//, \"\");\n  return `${base}/uploads/${rel}`;\n};\n  const fetchPosts = useCallback(async () => {\n    try {\n      setLoading(true);\n           const arr = await listUserPosts(user.username);\n           setPosts(arr || []);\n    } catch (e) {\n      console.error(e);\n      Alert.alert(\"Couldn’t load posts\", e?.message ?? \"Unknown error\");\n    } finally {\n      setLoading(false);\n    }\n  }, [user.username]);\n    const fetchFollowCounts = useCallback(async () => {\n      try {\n        const { followers, following } = await getFollowCounts(user.username);\n        setFollowerCount(followers);\n        setFollowingCount(following);\n      } catch (e) {\n        console.error(e);\n        // Silently ignore or show a small toast if you have one\n      }\n    }, [user.username]);\n\n  useEffect(() => {\n    fetchPosts();\n    fetchFollowCounts();\n  }, [fetchPosts, fetchFollowCounts]);\n\n  const onRefresh = useCallback(async () => {\n    setRefreshing(true);\n    try {\n      await Promise.all([fetchPosts(), fetchFollowCounts()]);\n    } finally {\n      setRefreshing(false);\n    }\n  }, [fetchPosts]);\n\n  return (\n    <View style={styles.screen}>\n      {/* Header Card */}\n      <View style={styles.headerCard}>\n        <View style={styles.headerRow}>\n          <Image source={{ uri: user.avatar }} style={styles.avatar} />\n          <View style={styles.headerStats}>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{posts.length}</Text>\n              <Text style={styles.statLabel}>Posts</Text>\n            </View>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{followerCount}</Text>\n              <Text style={styles.statLabel}>Followers</Text>\n\n            </View>\n            <View style={styles.statBlock}>\n              <Text style={styles.statNumber}>{followingCount}</Text>\n              <Text style={styles.statLabel}>Following</Text>\n            </View>\n          </View>\n        </View>\n\n        <View style={styles.nameRow}>\n          <Text style={styles.username}>{user.username}</Text>\n          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>\n            <Text style={styles.logoutBtnText}>Logout</Text>\n          </TouchableOpacity>\n        </View>\n      </View>\n\n      {/* Grid Card */}\n      <View style={styles.gridCard}>\n        {loading ? (\n          <View style={{ paddingVertical: 24 }}>\n            <ActivityIndicator />\n          </View>\n        ) : (\n\n     <FlatList\n       data={posts}\n       keyExtractor={(p, idx) => String(p.postid ?? idx)}\n            numColumns={3}\n            contentContainerStyle={styles.gridContainer}\n            renderItem={({ item }) => (\n              <View style={styles.gridItem}>\n                {/* Make sure gridImage has width: \"100%\" and aspectRatio: 1 in styles */}\n               <Image source={{ uri: toImageUri(item) }} style={styles.gridImage} />\n              </View>\n            )}\n            showsVerticalScrollIndicator={false}\n            refreshControl={\n              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />\n            }\n            ListEmptyComponent={\n              <Text style={{ textAlign: \"center\", paddingVertical: 24 }}>\n                No posts yet\n              </Text>\n            }\n          />\n        )}\n      </View>\n    </View>\n  );\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mobile_app/pages/ProfilePage.js b/mobile_app/pages/ProfilePage.js
+--- a/mobile_app/pages/ProfilePage.js	(revision 7a22798c9a290b722829bd7481142624d4bbaf1c)
++++ b/mobile_app/pages/ProfilePage.js	(date 1761840083238)
+@@ -1,40 +1,59 @@
+-import React, { useEffect, useMemo, useContext, useState, useCallback } from "react";
+-import { View, Text, Image, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from "react-native";
++import React, {
++  useEffect,
++  useMemo,
++  useContext,
++  useState,
++  useCallback,
++} from "react";
++import {
++  View,
++  Text,
++  Image,
++  FlatList,
++  TouchableOpacity,
++  ActivityIndicator,
++  RefreshControl,
++  Alert,
++  Modal,
++} from "react-native";
++import { Feather } from "@expo/vector-icons";
+ import { styles } from "../stylesProfilePage";
+ import { AuthContext } from "../AuthContext";
+-
+-//API imports
+-import { listUserPosts, API_BASE , getFollowCounts } from "../components/api";
++import { listUserPosts, API_BASE, getFollowCounts } from "../components/api";
++
+ export default function ProfilePage() {
+   const { logout, user: authUser } = useContext(AuthContext);
++
+   const user = useMemo(
+     () => ({
+       username: authUser?.username,
+       avatar: authUser?.avatar ?? "https://placehold.co/200x200/png",
+-      postsCount: 0,
+     }),
+     [authUser]
+   );
+ 
+-    const [posts, setPosts] = useState([]);
+-      const [loading, setLoading] = useState(true);
++  const [posts, setPosts] = useState([]);
++  const [loading, setLoading] = useState(true);
+   const [refreshing, setRefreshing] = useState(false);
+   const [followerCount, setFollowerCount] = useState(0);
+   const [followingCount, setFollowingCount] = useState(0);
++  const [selectedPost, setSelectedPost] = useState(null); // post for menu modal
++  const [modalVisible, setModalVisible] = useState(false);
+ 
+-const toImageUri = (p) => {
+-  const path =
+-    Number(p?.posttype) === 1 ? (p?.thumbpath || p?.datapath) : p?.datapath;
+-  if (!path) return null;
+-  const base = (API_BASE || "").replace(/\/$/, "");
+-  const rel = String(path).replace(/^\//, "");
+-  return `${base}/uploads/${rel}`;
+-};
++  const toImageUri = (p) => {
++    const path =
++      Number(p?.posttype) === 1 ? p?.thumbpath || p?.datapath : p?.datapath;
++    if (!path) return null;
++    const base = (API_BASE || "").replace(/\/$/, "");
++    const rel = String(path).replace(/^\//, "");
++    return `${base}/uploads/${rel}`;
++  };
++
+   const fetchPosts = useCallback(async () => {
+     try {
+       setLoading(true);
+-           const arr = await listUserPosts(user.username);
+-           setPosts(arr || []);
++      const arr = await listUserPosts(user.username);
++      setPosts(arr || []);
+     } catch (e) {
+       console.error(e);
+       Alert.alert("Couldn’t load posts", e?.message ?? "Unknown error");
+@@ -42,16 +61,16 @@
+       setLoading(false);
+     }
+   }, [user.username]);
+-    const fetchFollowCounts = useCallback(async () => {
+-      try {
+-        const { followers, following } = await getFollowCounts(user.username);
+-        setFollowerCount(followers);
+-        setFollowingCount(following);
+-      } catch (e) {
+-        console.error(e);
+-        // Silently ignore or show a small toast if you have one
+-      }
+-    }, [user.username]);
++
++  const fetchFollowCounts = useCallback(async () => {
++    try {
++      const { followers, following } = await getFollowCounts(user.username);
++      setFollowerCount(followers);
++      setFollowingCount(following);
++    } catch (e) {
++      console.error(e);
++    }
++  }, [user.username]);
+ 
+   useEffect(() => {
+     fetchPosts();
+@@ -67,9 +86,60 @@
+     }
+   }, [fetchPosts]);
+ 
++  /* ─── Edit / Delete handlers ─── */
++  const handleDelete = (post) => {
++    Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
++      { text: "Cancel", style: "cancel" },
++      {
++        text: "Delete",
++        style: "destructive",
++        onPress: async () => {
++          try {
++            // await deletePost(post.postid)   // ← your API call
++            setPosts((prev) => prev.filter((p) => p.postid !== post.postid));
++          } catch (e) {
++            Alert.alert("Error", "Failed to delete post.");
++          }
++        },
++      },
++    ]);
++    setModalVisible(false);
++  };
++
++  const handleEdit = (post) => {
++    Alert.prompt(
++      "Edit Caption",
++      "Enter a new caption for your post:",
++      [
++        {
++          text: "Cancel",
++          style: "cancel",
++        },
++        {
++          text: "Save",
++          onPress: async (newCaption) => {
++            try {
++              // await updatePostCaption(post.postid, newCaption)
++              setPosts((prev) =>
++                prev.map((p) =>
++                  p.postid === post.postid ? { ...p, caption: newCaption } : p
++                )
++              );
++            } catch (e) {
++              Alert.alert("Error", "Failed to update caption.");
++            }
++          },
++        },
++      ],
++      "plain-text",
++      post.caption || ""
++    );
++    setModalVisible(false);
++  };
++
+   return (
+     <View style={styles.screen}>
+-      {/* Header Card */}
++      {/* Header */}
+       <View style={styles.headerCard}>
+         <View style={styles.headerRow}>
+           <Image source={{ uri: user.avatar }} style={styles.avatar} />
+@@ -81,7 +151,6 @@
+             <View style={styles.statBlock}>
+               <Text style={styles.statNumber}>{followerCount}</Text>
+               <Text style={styles.statLabel}>Followers</Text>
+-
+             </View>
+             <View style={styles.statBlock}>
+               <Text style={styles.statNumber}>{followingCount}</Text>
+@@ -98,29 +167,42 @@
+         </View>
+       </View>
+ 
+-      {/* Grid Card */}
++      {/* Grid */}
+       <View style={styles.gridCard}>
+         {loading ? (
+           <View style={{ paddingVertical: 24 }}>
+             <ActivityIndicator />
+           </View>
+         ) : (
+-
+-     <FlatList
+-       data={posts}
+-       keyExtractor={(p, idx) => String(p.postid ?? idx)}
++          <FlatList
++            data={posts}
++            keyExtractor={(p, idx) => String(p.postid ?? idx)}
+             numColumns={3}
+             contentContainerStyle={styles.gridContainer}
+-            renderItem={({ item }) => (
+-              <View style={styles.gridItem}>
+-                {/* Make sure gridImage has width: "100%" and aspectRatio: 1 in styles */}
+-               <Image source={{ uri: toImageUri(item) }} style={styles.gridImage} />
+-              </View>
+-            )}
+             showsVerticalScrollIndicator={false}
+             refreshControl={
+               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+             }
++            renderItem={({ item }) => (
++              <View style={styles.gridItem}>
++                <View style={styles.postWrapper}>
++                  <Image
++                    source={{ uri: toImageUri(item) }}
++                    style={styles.gridImage}
++                  />
++                  {/* 3-dot menu */}
++                  <TouchableOpacity
++                    style={styles.menuButton}
++                    onPress={() => {
++                      setSelectedPost(item);
++                      setModalVisible(true);
++                    }}
++                  >
++                    <Feather name="more-vertical" size={20} color="#E5E7EB" />
++                  </TouchableOpacity>
++                </View>
++              </View>
++            )}
+             ListEmptyComponent={
+               <Text style={{ textAlign: "center", paddingVertical: 24 }}>
+                 No posts yet
+@@ -129,6 +211,39 @@
+           />
+         )}
+       </View>
++
++      {/* Modal Menu */}
++      <Modal
++        transparent
++        visible={modalVisible}
++        animationType="fade"
++        onRequestClose={() => setModalVisible(false)}
++      >
++        <View style={styles.modalOverlay}>
++          <View style={styles.modalContainer}>
++            <TouchableOpacity
++              style={styles.modalOption}
++              onPress={() => handleEdit(selectedPost)}
++            >
++              <Text style={styles.modalText}>Edit Caption</Text>
++            </TouchableOpacity>
++            <TouchableOpacity
++              style={[styles.modalOption, { borderBottomWidth: 0 }]}
++              onPress={() => handleDelete(selectedPost)}
++            >
++              <Text style={[styles.modalText, { color: "#EF4444" }]}>
++                Delete Post
++              </Text>
++            </TouchableOpacity>
++            <TouchableOpacity
++              style={styles.modalCancel}
++              onPress={() => setModalVisible(false)}
++            >
++              <Text style={styles.modalCancelText}>Cancel</Text>
++            </TouchableOpacity>
++          </View>
++        </View>
++      </Modal>
+     </View>
+   );
+ }

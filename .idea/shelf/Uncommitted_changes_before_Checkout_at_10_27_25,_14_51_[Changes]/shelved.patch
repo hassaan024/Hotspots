@@ -1,0 +1,160 @@
+Index: mobile_app/pages/PostsPage.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import React, { useEffect, useState, useCallback } from \"react\";\nimport {\n  View,\n  Text,\n  Image,\n  FlatList,\n  RefreshControl,\n  ActivityIndicator,\n  Dimensions,\n  TouchableOpacity,\n  ScrollView,\n  Modal,\n} from \"react-native\";\nimport { styles } from \"../styles\";\nimport {\n  listPosts,\n  API_BASE,\n  getPostWithComments,\n  updateLikeStatus,\n} from \"../components/api\";\nimport { Ionicons, Feather } from \"@expo/vector-icons\";\n\nconst { width } = Dimensions.get(\"window\");\nconst imageSize = width;\n\nfunction toImageUri(datapath) {\n  if (!datapath) return null;\n  if (/^https?:\\/\\//i.test(datapath)) return datapath;\n  if (datapath.startsWith(\"/\")) return `${API_BASE}${datapath}`;\n  const clean = datapath.replace(/^\\.?\\//, \"\");\n  return `${API_BASE}/uploads/${clean}`;\n}\n\nexport default function PostsPage() {\n  const [posts, setPosts] = useState([]);\n  const [refreshing, setRefreshing] = useState(false);\n  const [loading, setLoading] = useState(true);\n  const [likedPosts, setLikedPosts] = useState({});\n  const [likeCounts, setLikeCounts] = useState({});\n  const [followStatus, setFollowStatus] = useState({});\n  const [viewingPost, setViewingPost] = useState(null); // shows comment view\n  const [shareModalVisible, setShareModalVisible] = useState(false);\n  const [shareTargetPost, setShareTargetPost] = useState(null);\n\n  // Load posts\n  const load = useCallback(async () => {\n    try {\n      const data = await listPosts();\n      setPosts(data);\n\n      // initialize like counts if backend provides them\n      const counts = {};\n      data.forEach((p) => {\n        counts[p.postid] = p.likeCount || 0;\n      });\n      setLikeCounts(counts);\n    } catch (e) {\n      console.error(e);\n    } finally {\n      setLoading(false);\n      setRefreshing(false);\n    }\n  }, []);\n\n  useEffect(() => {\n    load();\n  }, [load]);\n\n  // Toggle like and count (and save to backend)\n  const toggleLike = async (postid) => {\n    setLikedPosts((prev) => {\n      const alreadyLiked = prev[postid];\n      setLikeCounts((counts) => ({\n        ...counts,\n        [postid]: Math.max(0, (counts[postid] || 0) + (alreadyLiked ? -1 : 1)),\n      }));\n      return {\n        ...prev,\n        [postid]: !alreadyLiked,\n      };\n    });\n\n    const likedNow = !likedPosts[postid];\n    await updateLikeStatus(postid, likedNow); // backend sync\n  };\n\n  const handleFollowToggle = (username) => {\n    setFollowStatus((prev) => ({\n      ...prev,\n      [username]: !prev[username],\n    }));\n  };\n\n  // Open comment view\n  const handleComment = async (postid) => {\n    try {\n      setLoading(true);\n      const data = await getPostWithComments(postid);\n      setViewingPost(data);\n    } catch (error) {\n      console.error(\"Error loading comments:\", error);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const goBackToFeed = () => setViewingPost(null);\n\n  // Comment View (when a post is opened)\n  if (viewingPost) {\n    const imgUri = toImageUri(viewingPost.datapath);\n    const profilePic =\n      viewingPost.profilepic && viewingPost.profilepic !== \"\"\n        ? toImageUri(viewingPost.profilepic)\n        : \"https://cdn-icons-png.flaticon.com/512/847/847969.png\";\n\n    return (\n      <ScrollView style={[styles.app, { paddingTop: 10 }]}>\n        {/* Header */}\n        <View\n          style={{\n            flexDirection: \"row\",\n            alignItems: \"center\",\n            paddingHorizontal: 12,\n            paddingVertical: 10,\n          }}\n        >\n          <TouchableOpacity onPress={goBackToFeed}>\n            <Ionicons name=\"arrow-back\" size={26} color=\"#E5E7EB\" />\n          </TouchableOpacity>\n          <Image\n            source={{ uri: profilePic }}\n            style={{\n              width: 38,\n              height: 38,\n              borderRadius: 19,\n              marginHorizontal: 10,\n              borderWidth: 1.5,\n              borderColor: \"#9CA3AF\",\n            }}\n          />\n          <Text style={{ color: \"#E5E7EB\", fontWeight: \"bold\" }}>\n            @{viewingPost.postedby}\n          </Text>\n        </View>\n\n        {/* Post image */}\n        <Image\n          source={{ uri: imgUri }}\n          style={{\n            width: width,\n            height: width,\n            resizeMode: \"cover\",\n          }}\n        />\n\n        {/* Caption */}\n        <View style={{ paddingHorizontal: 14, marginTop: 8 }}>\n          <Text style={{ color: \"#E5E7EB\" }}>\n            <Text style={{ fontWeight: \"bold\" }}>\n              @{viewingPost.postedby}{\" \"}\n            </Text>\n            {viewingPost.description}\n          </Text>\n        </View>\n\n        {/* Comments */}\n        <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>\n          <Text\n            style={{\n              color: \"#9CA3AF\",\n              fontWeight: \"bold\",\n              marginBottom: 8,\n            }}\n          >\n            Comments\n          </Text>\n          {viewingPost.comments && viewingPost.comments.length > 0 ? (\n            viewingPost.comments.map((c) => (\n              <Text\n                key={c.commentid}\n                style={{ color: \"#E5E7EB\", marginBottom: 6 }}\n              >\n                <Text style={{ fontWeight: \"bold\" }}>@{c.username} </Text>\n                {c.text}\n              </Text>\n            ))\n          ) : (\n            <Text style={{ color: \"#9CA3AF\" }}>No comments yet.</Text>\n          )}\n        </View>\n      </ScrollView>\n    );\n  }\n\n  // Main Feed View\n  return (\n    <View style={[styles.app, { paddingTop: 10 }]}>\n      {loading ? (\n        <ActivityIndicator\n          size=\"large\"\n          color=\"#60A5FA\"\n          style={{ marginTop: 40 }}\n        />\n      ) : (\n        <FlatList\n          data={posts}\n          renderItem={({ item }) => {\n            const imgUri = toImageUri(item.datapath);\n            const profilePic =\n              item.profilepic && item.profilepic !== \"\"\n                ? toImageUri(item.profilepic)\n                : \"https://cdn-icons-png.flaticon.com/512/847/847969.png\";\n            const isLiked = likedPosts[item.postid];\n            const isFollowing = followStatus[item.postedby];\n\n            return (\n              <View\n                style={{\n                  backgroundColor: \"#121821\",\n                  marginBottom: 20,\n                  borderBottomWidth: 0.5,\n                  borderBottomColor: \"#1F2937\",\n                }}\n              >\n                {/* Header */}\n                <View\n                  style={{\n                    flexDirection: \"row\",\n                    alignItems: \"center\",\n                    justifyContent: \"space-between\",\n                    paddingHorizontal: 12,\n                    paddingVertical: 10,\n                  }}\n                >\n                  <View style={{ flexDirection: \"row\", alignItems: \"center\" }}>\n                    <Image\n                      source={{ uri: profilePic }}\n                      style={{\n                        width: 38,\n                        height: 38,\n                        borderRadius: 19,\n                        marginRight: 10,\n                        borderWidth: 1.5,\n                        borderColor: \"#9CA3AF\",\n                      }}\n                    />\n                    <TouchableOpacity\n                      onPress={() => console.log(`Clicked on @${item.postedby}`)} // makes the username clickable\n                    >\n                      <Text style={styles.username}>@{item.postedby}</Text>\n                    </TouchableOpacity>\n\n                  </View>\n\n                  <TouchableOpacity\n                    onPress={() => handleFollowToggle(item.postedby)}\n                    style={{\n                      backgroundColor: \"#1F2937\",\n                      paddingVertical: 5,\n                      paddingHorizontal: 12,\n                      borderRadius: 8,\n                    }}\n                  >\n                    <Text style={{ color: \"#E5E7EB\", fontWeight: \"bold\" }}>\n                      {isFollowing ? \"Unfollow\" : \"Follow\"}\n                    </Text>\n                  </TouchableOpacity>\n                </View>\n\n                {/* Post image */}\n                <Image\n                  source={{ uri: imgUri }}\n                  style={{\n                    width: imageSize,\n                    height: imageSize,\n                    resizeMode: \"cover\",\n                  }}\n                />\n\n                {/* Icons */}\n                <View\n                  style={{\n                    flexDirection: \"row\",\n                    alignItems: \"center\",\n                    gap: 14,\n                    paddingHorizontal: 14,\n                    paddingVertical: 10,\n                  }}\n                >\n                  <TouchableOpacity onPress={() => toggleLike(item.postid)}>\n                    <Ionicons\n                      name={isLiked ? \"heart\" : \"heart-outline\"}\n                      size={26}\n                      color={isLiked ? \"#F87171\" : \"#E5E7EB\"}\n                    />\n                  </TouchableOpacity>\n\n                  <TouchableOpacity onPress={() => handleComment(item.postid)}>\n                    <Feather name=\"message-circle\" size={24} color=\"#E5E7EB\" />\n                  </TouchableOpacity>\n\n                  <TouchableOpacity\n                    onPress={() => {\n                      setShareTargetPost(item);\n                      setShareModalVisible(true);\n                    }}\n                  >\n                    <Feather name=\"send\" size={22} color=\"#E5E7EB\" />\n                  </TouchableOpacity>\n                </View>\n\n                {/* Likes + Caption */}\n                <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>\n                  <Text\n                    style={{\n                      color: \"#E5E7EB\",\n                      marginBottom: 3,\n                      fontWeight: \"600\",\n                    }}\n                  >\n                    {likeCounts[item.postid] || 0} likes\n                  </Text>\n\n                  {item.description ? (\n                    <Text style={{ color: \"#E5E7EB\", marginTop: 4 }}>\n                      <Text style={{ fontWeight: \"bold\" }}>\n                        @{item.postedby}{\" \"}\n                      </Text>\n                      {item.description}\n                    </Text>\n                  ) : null}\n                </View>\n              </View>\n            );\n          }}\n          keyExtractor={(item) => String(item.postid)}\n          showsVerticalScrollIndicator={false}\n          refreshControl={\n            <RefreshControl\n              refreshing={refreshing}\n              onRefresh={() => {\n                setRefreshing(true);\n                load();\n              }}\n              tintColor=\"#fff\"\n            />\n          }\n          ListEmptyComponent={\n            <Text\n              style={{\n                color: \"#9CA3AF\",\n                textAlign: \"center\",\n                marginTop: 24,\n              }}\n            >\n              No posts yet.\n            </Text>\n          }\n        />\n      )}\n\n      {/* Share feature */}\n      <Modal\n        animationType=\"slide\"\n        transparent={true}\n        visible={shareModalVisible}\n        onRequestClose={() => setShareModalVisible(false)}\n      >\n        <View\n          style={{\n            flex: 1,\n            justifyContent: \"center\",\n            alignItems: \"center\",\n            backgroundColor: \"rgba(0, 0, 0, 0.7)\",\n          }}\n        >\n          <View\n            style={{\n              backgroundColor: \"#1F2937\",\n              borderRadius: 12,\n              padding: 20,\n              width: \"80%\",\n              maxHeight: \"60%\",\n            }}\n          >\n            <Text\n              style={{\n                color: \"#E5E7EB\",\n                fontSize: 18,\n                fontWeight: \"bold\",\n                marginBottom: 12,\n                textAlign: \"center\",\n              }}\n            >\n              Share Post\n            </Text>\n\n            <Text\n              style={{\n                color: \"#9CA3AF\",\n                marginBottom: 12,\n                textAlign: \"center\",\n              }}\n            >\n              Select someone to share with:\n            </Text>\n\n            {/* Example static list (replace with backend data later) */}\n            {[\"dylan\", \"journey\", \"hassaan\", \"fariza\"].map((user) => (\n              <TouchableOpacity\n                key={user}\n                style={{\n                  paddingVertical: 10,\n                  borderBottomWidth: 0.5,\n                  borderBottomColor: \"#374151\",\n                }}\n                onPress={() => {\n                  console.log(\n                    `Shared post ${shareTargetPost?.postid} with ${user}`\n                  );\n                  setShareModalVisible(false);\n                }}\n              >\n                <Text style={{ color: \"#E5E7EB\", fontSize: 16 }}>@{user}</Text>\n              </TouchableOpacity>\n            ))}\n\n            <TouchableOpacity\n              onPress={() => setShareModalVisible(false)}\n              style={{\n                marginTop: 20,\n                alignSelf: \"center\",\n                backgroundColor: \"#374151\",\n                paddingHorizontal: 24,\n                paddingVertical: 10,\n                borderRadius: 8,\n              }}\n            >\n              <Text style={{ color: \"#E5E7EB\" }}>Cancel</Text>\n            </TouchableOpacity>\n          </View>\n        </View>\n      </Modal>\n    </View>\n  );\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mobile_app/pages/PostsPage.js b/mobile_app/pages/PostsPage.js
+--- a/mobile_app/pages/PostsPage.js	(revision 7a22798c9a290b722829bd7481142624d4bbaf1c)
++++ b/mobile_app/pages/PostsPage.js	(date 1761594394975)
+@@ -38,7 +38,7 @@
+   const [likedPosts, setLikedPosts] = useState({});
+   const [likeCounts, setLikeCounts] = useState({});
+   const [followStatus, setFollowStatus] = useState({});
+-  const [viewingPost, setViewingPost] = useState(null); // shows comment view
++  const [viewingPost, setViewingPost] = useState(null);
+   const [shareModalVisible, setShareModalVisible] = useState(false);
+   const [shareTargetPost, setShareTargetPost] = useState(null);
+ 
+@@ -48,7 +48,6 @@
+       const data = await listPosts();
+       setPosts(data);
+ 
+-      // initialize like counts if backend provides them
+       const counts = {};
+       data.forEach((p) => {
+         counts[p.postid] = p.likeCount || 0;
+@@ -66,7 +65,7 @@
+     load();
+   }, [load]);
+ 
+-  // Toggle like and count (and save to backend)
++  // Toggle like
+   const toggleLike = async (postid) => {
+     setLikedPosts((prev) => {
+       const alreadyLiked = prev[postid];
+@@ -81,7 +80,7 @@
+     });
+ 
+     const likedNow = !likedPosts[postid];
+-    await updateLikeStatus(postid, likedNow); // backend sync
++    await updateLikeStatus(postid, likedNow);
+   };
+ 
+   const handleFollowToggle = (username) => {
+@@ -91,7 +90,6 @@
+     }));
+   };
+ 
+-  // Open comment view
+   const handleComment = async (postid) => {
+     try {
+       setLoading(true);
+@@ -106,7 +104,11 @@
+ 
+   const goBackToFeed = () => setViewingPost(null);
+ 
+-  // Comment View (when a post is opened)
++  // helper to lowercase first letter
++  const formatUsername = (name) =>
++    name ? name.charAt(0).toLowerCase() + name.slice(1) : "";
++
++  // Comment View
+   if (viewingPost) {
+     const imgUri = toImageUri(viewingPost.datapath);
+     const profilePic =
+@@ -140,7 +142,7 @@
+             }}
+           />
+           <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+-            @{viewingPost.postedby}
++            @{formatUsername(viewingPost.postedby)}
+           </Text>
+         </View>
+ 
+@@ -158,7 +160,7 @@
+         <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
+           <Text style={{ color: "#E5E7EB" }}>
+             <Text style={{ fontWeight: "bold" }}>
+-              @{viewingPost.postedby}{" "}
++              @{formatUsername(viewingPost.postedby)}{" "}
+             </Text>
+             {viewingPost.description}
+           </Text>
+@@ -181,7 +183,9 @@
+                 key={c.commentid}
+                 style={{ color: "#E5E7EB", marginBottom: 6 }}
+               >
+-                <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
++                <Text style={{ fontWeight: "bold" }}>
++                  @{formatUsername(c.username)}{" "}
++                </Text>
+                 {c.text}
+               </Text>
+             ))
+@@ -193,7 +197,7 @@
+     );
+   }
+ 
+-  // Main Feed View
++  // Main Feed
+   return (
+     <View style={[styles.app, { paddingTop: 10 }]}>
+       {loading ? (
+@@ -213,6 +217,7 @@
+                 : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+             const isLiked = likedPosts[item.postid];
+             const isFollowing = followStatus[item.postedby];
++            const username = formatUsername(item.postedby);
+ 
+             return (
+               <View
+@@ -246,11 +251,10 @@
+                       }}
+                     />
+                     <TouchableOpacity
+-                      onPress={() => console.log(`Clicked on @${item.postedby}`)} // makes the username clickable
++                      onPress={() => console.log(`Clicked on @${username}`)}
+                     >
+-                      <Text style={styles.username}>@{item.postedby}</Text>
++                      <Text style={styles.username}>@{username}</Text>
+                     </TouchableOpacity>
+-
+                   </View>
+ 
+                   <TouchableOpacity
+@@ -324,9 +328,7 @@
+ 
+                   {item.description ? (
+                     <Text style={{ color: "#E5E7EB", marginTop: 4 }}>
+-                      <Text style={{ fontWeight: "bold" }}>
+-                        @{item.postedby}{" "}
+-                      </Text>
++                      <Text style={{ fontWeight: "bold" }}>@{username} </Text>
+                       {item.description}
+                     </Text>
+                   ) : null}
+@@ -406,7 +408,6 @@
+               Select someone to share with:
+             </Text>
+ 
+-            {/* Example static list (replace with backend data later) */}
+             {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+               <TouchableOpacity
+                 key={user}
+Index: mobile_app/.env
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>EXPO_PUBLIC_API_URL=http://25.3.215.148:3002\nEXPO_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyByPE_DkBgzbVtxYj381CA0cdSg6w8W1Tw
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mobile_app/.env b/mobile_app/.env
+--- a/mobile_app/.env	(revision 7a22798c9a290b722829bd7481142624d4bbaf1c)
++++ b/mobile_app/.env	(date 1761594550057)
+@@ -1,2 +1,2 @@
+-EXPO_PUBLIC_API_URL=http://25.3.215.148:3002
++EXPO_PUBLIC_API_URL=http://25.3.215.148:3001
+ EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyByPE_DkBgzbVtxYj381CA0cdSg6w8W1Tw
+\ No newline at end of file

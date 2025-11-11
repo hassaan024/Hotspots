@@ -1,0 +1,286 @@
+Index: mobile_app/styles.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import { StyleSheet } from \"react-native\";\n\n\nconst colors = {\n  bg: \"#0B0F14\",          // app background\n  panel: \"#121821\",       // cards/panels\n  panelBorder: \"#1F2937\", // subtle border\n  text: \"#E5E7EB\",        // primary text\n  textDim: \"#9CA3AF\",     // secondary text\n  brand: \"#60A5FA\",       // blue\n  accent: \"#FBBF24\",      // amber (active button)\n  btnBg: \"#1F2937\",       // inactive button\n};\n\nexport const styles = StyleSheet.create({\n  app: {\n    flex: 1,\n    backgroundColor: colors.bg,\n  },\n\n  /* Navbar (bottom) */\n  navbar: {\n    position: \"absolute\",\n    bottom: 0,\n    left: 0,\n    right: 0,\n    zIndex: 10,\n    flexDirection: \"row\",\n    justifyContent: \"space-between\",\n    alignItems: \"center\",\n    paddingHorizontal: 16,\n    paddingVertical: 12,\n    backgroundColor: colors.panel,\n    borderTopWidth: 1,\n    borderTopColor: colors.panelBorder,\n    shadowColor: \"#000\",\n    shadowOpacity: 0.35,\n    shadowRadius: 8,\n    shadowOffset: { width: 0, height: -2 },\n    elevation: 6,\n  },\n  brand: {\n    fontSize: 18,\n    fontWeight: \"700\",\n    color: colors.brand,\n  },\n  navButtons: {\n    flexDirection: \"row\",\n    gap: 8,\n  },\n  navBtn: {\n    paddingHorizontal: 14,\n    paddingVertical: 8,\n    borderRadius: 10,\n    backgroundColor: colors.btnBg,\n    minWidth: 44,\n    minHeight: 44,\n    paddingHorizontal: 12,\n    justifyContent: \"center\",\n    alignItems: \"center\",\n    borderRadius: 10,\n    backgroundColor: \"#1F2937\",\n  },\n  navBtnActive: {\n    backgroundColor: \"#2a2a1f\",\n    borderColor: \"#FBBF24\",\n    borderWidth: 1,\n    shadowColor: \"#FBBF24\",\n    shadowOpacity: 0.3,\n    shadowRadius: 4,\n    shadowOffset: { width: 0, height: 2 },\n    elevation: 2,\n  },\n  navBtnText: {\n    color: colors.text,\n    fontWeight: \"600\",\n  },\n  navBtnTextActive: {\n    color: \"#111827\",\n    fontWeight: \"700\",\n  },\n\n  /* Content (reserve space for navbar) */\n  content: {\n    flex: 1,\n    padding: 16,\n    marginBottom: 64,\n  },\n\n  /* Pages */\n  screen: {\n    flex: 1,\n    backgroundColor: colors.panel,\n    borderRadius: 14,\n    padding: 32,\n    borderWidth: 1,\n    borderColor: colors.panelBorder,\n  },\n  screenTitle: {\n    fontSize: 22,\n    fontWeight: \"800\",\n    color: colors.text,\n    marginBottom: 6,\n  },\n  screenSub: {\n    color: colors.textDim,\n  },\n  /* Map */\n  mapWrapper: {\n    position: \"relative\",\n  },\n  mapContainer: {\n    flex: 1,\n    minHeight: 500,\n    borderRadius: 0,\n    overflow: \"hidden\",\n    borderWidth: 1,\n    borderColor: \"#ddd\",\n  },\n  mapLoadingOverlay: {\n    position: \"absolute\",\n    top: 0,\n    left: 0,\n    right: 0,\n    bottom: 0,\n    alignItems: \"center\",\n    justifyContent: \"center\",\n    backgroundColor: \"rgba(0,0,0,0.35)\",\n    borderRadius: 12,\n  },\n  mapLoadingText: {\n    color: \"#fff\",\n    marginTop: 12,\n  },\n  //everything below this is for the posts\n    postWrapper: {\n      width : \"100%\",\n      backgroundColor:colors.panelBorder,\n      padding: 16,\n    },\n    postBox: {\n      backgroundColor: colors.panel,\n      borderRadius: 32,\n      marginVertical: 10,\n      overflow: \"hidden\",\n      \n    },\n    username: {\n      color: \"#fff\",\n      fontWeight: \"bold\",\n      marginBottom: 5,\n      marginLeft: 5,\n    },\n    text: {\n      color: \"#fff\",\n      marginLeft: 5,\n    },\n    boldUsername: {\n      fontWeight: \"bold\",\n      color: \"#fff\",\n    },\n    image: {\n      width: '100%',\n      height: 750,\n      resizeMode: 'cover',\n    },\n});\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mobile_app/styles.js b/mobile_app/styles.js
+--- a/mobile_app/styles.js	(revision 7a22798c9a290b722829bd7481142624d4bbaf1c)
++++ b/mobile_app/styles.js	(date 1761776376947)
+@@ -1,15 +1,16 @@
+ import { StyleSheet } from "react-native";
+-
++import { LinearGradient } from "expo-linear-gradient"; // if you’ll use gradients later
+ 
+ const colors = {
+-  bg: "#0B0F14",          // app background
+-  panel: "#121821",       // cards/panels
+-  panelBorder: "#1F2937", // subtle border
+-  text: "#E5E7EB",        // primary text
+-  textDim: "#9CA3AF",     // secondary text
+-  brand: "#60A5FA",       // blue
+-  accent: "#FBBF24",      // amber (active button)
+-  btnBg: "#1F2937",       // inactive button
++  bg: "#0A0E13",           // main background (slightly softer black-blue)
++  panel: "#131A23",        // card / container panels
++  panelBorder: "#1E293B",  // dark border accent
++  text: "#F3F4F6",         // light text
++  textDim: "#9CA3AF",      // dimmed / secondary text
++  brand: "#3B82F6",        // blue (brand color)
++  accent: "#FBBF24",       // gold/amber accent
++  btnBg: "#1F2937",        // neutral button
++  shadow: "rgba(0, 0, 0, 0.5)", // general shadow color
+ };
+ 
+ export const styles = StyleSheet.create({
+@@ -18,105 +19,118 @@
+     backgroundColor: colors.bg,
+   },
+ 
+-  /* Navbar (bottom) */
++  /* ───── Navbar ───── */
+   navbar: {
+     position: "absolute",
+     bottom: 0,
+     left: 0,
+     right: 0,
+-    zIndex: 10,
++    zIndex: 20,
+     flexDirection: "row",
+-    justifyContent: "space-between",
++    justifyContent: "space-around",
+     alignItems: "center",
+-    paddingHorizontal: 16,
+-    paddingVertical: 12,
+-    backgroundColor: colors.panel,
++    paddingVertical: 14,
++    backgroundColor: "rgba(18, 24, 33, 0.95)",
+     borderTopWidth: 1,
+     borderTopColor: colors.panelBorder,
+-    shadowColor: "#000",
+-    shadowOpacity: 0.35,
+-    shadowRadius: 8,
++    shadowColor: colors.shadow,
++    shadowOpacity: 0.45,
++    shadowRadius: 10,
+     shadowOffset: { width: 0, height: -2 },
+-    elevation: 6,
++    elevation: 8,
++    backdropFilter: "blur(6px)", // looks great if supported
+   },
++
+   brand: {
+     fontSize: 18,
+     fontWeight: "700",
+     color: colors.brand,
+   },
++
+   navButtons: {
+     flexDirection: "row",
+-    gap: 8,
++    gap: 10,
+   },
++
+   navBtn: {
+-    paddingHorizontal: 14,
+-    paddingVertical: 8,
+-    borderRadius: 10,
++    paddingHorizontal: 16,
++    paddingVertical: 10,
++    borderRadius: 12,
+     backgroundColor: colors.btnBg,
+-    minWidth: 44,
+-    minHeight: 44,
+-    paddingHorizontal: 12,
+     justifyContent: "center",
+     alignItems: "center",
+-    borderRadius: 10,
+-    backgroundColor: "#1F2937",
++    minWidth: 44,
++    minHeight: 44,
+   },
++
+   navBtnActive: {
+-    backgroundColor: "#2a2a1f",
+-    borderColor: "#FBBF24",
++    backgroundColor: "#2C2F1A",
++    borderColor: colors.accent,
+     borderWidth: 1,
+-    shadowColor: "#FBBF24",
+-    shadowOpacity: 0.3,
+-    shadowRadius: 4,
++    shadowColor: colors.accent,
++    shadowOpacity: 0.4,
++    shadowRadius: 6,
+     shadowOffset: { width: 0, height: 2 },
+-    elevation: 2,
++    elevation: 3,
+   },
++
+   navBtnText: {
+     color: colors.text,
+     fontWeight: "600",
+   },
++
+   navBtnTextActive: {
+     color: "#111827",
+     fontWeight: "700",
+   },
+ 
+-  /* Content (reserve space for navbar) */
++  /* ───── Page Layout ───── */
+   content: {
+     flex: 1,
+-    padding: 16,
+-    marginBottom: 64,
++    paddingHorizontal: 18,
++    paddingTop: 16,
++    marginBottom: 70, // space for navbar
+   },
+ 
+-  /* Pages */
+   screen: {
+     flex: 1,
+     backgroundColor: colors.panel,
+-    borderRadius: 14,
+-    padding: 32,
++    borderRadius: 16,
++    padding: 28,
+     borderWidth: 1,
+     borderColor: colors.panelBorder,
++    shadowColor: colors.shadow,
++    shadowOpacity: 0.3,
++    shadowRadius: 8,
++    shadowOffset: { width: 0, height: 3 },
+   },
++
+   screenTitle: {
+-    fontSize: 22,
++    fontSize: 24,
+     fontWeight: "800",
+     color: colors.text,
+     marginBottom: 6,
+   },
++
+   screenSub: {
+     color: colors.textDim,
++    fontSize: 15,
+   },
+-  /* Map */
++
++  /* ───── Map ───── */
+   mapWrapper: {
+     position: "relative",
+   },
++
+   mapContainer: {
+     flex: 1,
+-    minHeight: 500,
+-    borderRadius: 0,
++    minHeight: 450,
++    borderRadius: 14,
+     overflow: "hidden",
+     borderWidth: 1,
+-    borderColor: "#ddd",
++    borderColor: colors.panelBorder,
+   },
++
+   mapLoadingOverlay: {
+     position: "absolute",
+     top: 0,
+@@ -125,43 +139,60 @@
+     bottom: 0,
+     alignItems: "center",
+     justifyContent: "center",
+-    backgroundColor: "rgba(0,0,0,0.35)",
++    backgroundColor: "rgba(0,0,0,0.4)",
+     borderRadius: 12,
+   },
++
+   mapLoadingText: {
+     color: "#fff",
+-    marginTop: 12,
++    fontSize: 16,
++    marginTop: 10,
+   },
+-  //everything below this is for the posts
+-    postWrapper: {
+-      width : "100%",
+-      backgroundColor:colors.panelBorder,
+-      padding: 16,
+-    },
+-    postBox: {
+-      backgroundColor: colors.panel,
+-      borderRadius: 32,
+-      marginVertical: 10,
+-      overflow: "hidden",
+-      
+-    },
+-    username: {
+-      color: "#fff",
+-      fontWeight: "bold",
+-      marginBottom: 5,
+-      marginLeft: 5,
+-    },
+-    text: {
+-      color: "#fff",
+-      marginLeft: 5,
+-    },
+-    boldUsername: {
+-      fontWeight: "bold",
+-      color: "#fff",
+-    },
+-    image: {
+-      width: '100%',
+-      height: 750,
+-      resizeMode: 'cover',
+-    },
++
++  /* ───── Posts ───── */
++  postWrapper: {
++    width: "100%",
++    backgroundColor: "transparent",
++    paddingVertical: 10,
++  },
++
++  postBox: {
++    backgroundColor: colors.panel,
++    borderRadius: 28,
++    marginVertical: 12,
++    overflow: "hidden",
++    borderWidth: 1,
++    borderColor: colors.panelBorder,
++    shadowColor: colors.shadow,
++    shadowOpacity: 0.25,
++    shadowRadius: 10,
++    shadowOffset: { width: 0, height: 4 },
++    elevation: 4,
++  },
++
++  username: {
++    color: colors.text,
++    fontWeight: "700",
++    marginBottom: 6,
++    marginLeft: 10,
++    fontSize: 16,
++  },
++
++  text: {
++    color: colors.textDim,
++    marginLeft: 10,
++    marginBottom: 10,
++    fontSize: 15,
++  },
++
++  boldUsername: {
++    fontWeight: "bold",
++    color: colors.text,
++  },
++
++  image: {
++    width: "100%",
++    height: 500,
++    resizeMode: "cover",
++  },
+ });
