@@ -76,6 +76,7 @@ function getPoster(p) {
   return null; // video with no thumb available
 }
 
+<<<<<<< Updated upstream
 /** unified media renderer */
 const Media = ({ uri, isVideo, poster, size }) => {
 const [ar, setAr] = React.useState(1); // aspect ratio = width/height
@@ -84,14 +85,138 @@ const [ar, setAr] = React.useState(1); // aspect ratio = width/height
 React.useEffect(() => {
   if (!isVideo && uri) {
     Image.getSize(uri, (w, h) => { if (w && h) setAr(w / h); }, () => {});
+=======
+// Modified Media to accept and report aspect ratio upward
+const Media = ({ uri, isVideo, poster, size, onAspectRatio }) => {
+  const [ar, setAr] = React.useState(1);
+  const [muted, setMuted] = React.useState(true);
+  const webVideoRef = React.useRef(null);
+  const nativeVideoRef = React.useRef(null);
+
+  // derive aspect ratio for images
+  React.useEffect(() => {
+    if (!isVideo && uri) {
+      Image.getSize(
+        uri,
+        (w, h) => {
+          if (w && h) {
+            setAr(w / h);
+            if (onAspectRatio) onAspectRatio(w / h);
+          }
+        },
+        () => {}
+      );
+    }
+  }, [uri, isVideo]);
+
+  // For video: report aspect ratio upward when it changes
+  React.useEffect(() => {
+    if (onAspectRatio && ar) {
+      onAspectRatio(ar);
+    }
+    // Only call when ar changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ar]);
+
+  // WEB: unmute and ensure playback on first user interaction
+  const handleWebClick = () => {
+    try {
+      setMuted(false);
+      const v = webVideoRef.current;
+      if (v && v.play) v.play().catch(() => {});
+    } catch {}
+  };
+
+  // NATIVE: unmute and ensure playback on tap
+  const handleNativePress = async () => {
+    try {
+      setMuted(false);
+      const v = nativeVideoRef.current;
+      if (v?.setStatusAsync) {
+        await v.setStatusAsync({
+          shouldPlay: true,
+          isMuted: false,
+          volume: 1.0,
+        });
+      }
+    } catch {}
+  };
+
+  if (!isVideo) {
+    return (
+      <Image
+        source={{ uri }}
+        style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+      />
+    );
+>>>>>>> Stashed changes
   }
 }, [uri, isVideo]);
 
+<<<<<<< Updated upstream
 // when it's a VIDEO (native), grab natural size from onLoad
 const onVideoLoad = (status) => {
   const ns = status?.naturalSize;
   const w = ns?.width, h = ns?.height;
   if (w && h) setAr(w / h);
+=======
+  if (isWeb) {
+    return (
+      <video
+        ref={webVideoRef}
+        src={uri}
+        poster={poster || undefined}
+        playsInline
+        autoPlay
+        muted={muted}
+        loop
+        controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+        disablePictureInPicture
+        onContextMenu={(e) => e.preventDefault()}
+        onLoadedData={() => {
+          try {
+            // Try to get video dimensions for aspect ratio
+            const v = webVideoRef.current;
+            if (v && v.videoWidth && v.videoHeight) {
+              const ratio = v.videoWidth / v.videoHeight;
+              setAr(ratio);
+              if (onAspectRatio) onAspectRatio(ratio);
+            }
+            if (v && v.play) v.play().catch(() => {});
+          } catch {}
+        }}
+        onClick={handleWebClick}
+        style={{ width: "100%", height: "100%", display: "block", objectFit: "cover", cursor: "pointer" }}
+      >
+        Your browser does not support the video tag.
+      </video>
+    );
+  }
+
+  return VideoComp ? (
+    <TouchableOpacity activeOpacity={1} onPress={handleNativePress}>
+      <VideoComp
+        ref={nativeVideoRef}
+        source={{ uri }}
+        style={{ width: "100%", height: "100%" }}
+        resizeMode="cover"
+        posterSource={poster ? { uri: poster } : undefined}
+        onLoad={({ naturalSize }) => {
+          const w = naturalSize?.width, h = naturalSize?.height;
+          if (w && h) {
+            setAr(w / h);
+            if (onAspectRatio) onAspectRatio(w / h);
+          }
+        }}
+        useNativeControls={false}
+        shouldPlay
+        isLooping
+        isMuted={muted}
+        volume={muted ? 0.0 : 1.0}
+      />
+    </TouchableOpacity>
+  ) : null;
+>>>>>>> Stashed changes
 };
 
 // IMAGE render (width fixed, height derived by aspectRatio)
@@ -241,7 +366,11 @@ const openViewer = (post) => {
     setViewerLoading(true);
   };
 
+  // Aspect ratio state for modal video
+  const [modalVideoAR, setModalVideoAR] = useState(null);
+
   return (
+<<<<<<< Updated upstream
     <View style={styles.screen}>
       {/* Header Card */}
       <View style={styles.headerCard}>
@@ -251,30 +380,99 @@ const openViewer = (post) => {
             <View style={styles.statBlock}>
               <Text style={styles.statNumber}>{posts.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
+=======
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+    <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+      {/* header */}
+      <View
+        style={{
+          backgroundColor: "#0B1220",
+          borderRadius: 14,
+          marginTop: 24,
+          marginBottom: 18,
+          paddingHorizontal: 18,
+          paddingVertical: 18,
+          width: "100%",
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={{ uri: user.avatar }}
+            style={{
+              width: 74,
+              height: 74,
+              borderRadius: 37,
+              marginRight: 16,
+              borderWidth: 2,
+              borderColor: "#181F32",
+              backgroundColor: "#181F32",
+            }}
+          />
+          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{posts.length}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Posts</Text>
+>>>>>>> Stashed changes
             </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{followerCount}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{followerCount}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Followers</Text>
             </View>
-            <View style={styles.statBlock}>
-              <Text style={styles.statNumber}>{followingCount}</Text>
-              <Text style={styles.statLabel}>Following</Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold", fontSize: 18 }}>{followingCount}</Text>
+              <Text style={{ color: "#E5E7EB", fontSize: 13, opacity: 0.75, marginTop: 2 }}>Following</Text>
             </View>
           </View>
         </View>
-
-        <View style={styles.nameRow}>
-          <Text style={styles.username}>{user.username}</Text>
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-            <Text style={styles.logoutBtnText}>Logout</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16 }}>
+          <Text
+            style={{
+              color: "#E5E7EB",
+              fontWeight: "bold",
+              fontSize: 17,
+              flex: 1,
+            }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {user.username}
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#181F32",
+              borderRadius: 8,
+              paddingHorizontal: 16,
+              paddingVertical: 7,
+              marginLeft: 10,
+            }}
+            onPress={logout}
+          >
+            <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>Logout</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+<<<<<<< Updated upstream
       {/* Grid Card */}
       <View style={styles.gridCard}>
+=======
+      {/* grid */}
+      <View
+        style={{
+          backgroundColor: "#0B1220",
+          borderRadius: 14,
+          paddingVertical: 8,
+          paddingHorizontal: 0,
+          width: "100%",
+          flex: 1,
+        }}
+      >
+>>>>>>> Stashed changes
         {loading ? (
-          <View style={{ paddingVertical: 24 }}>
+          <View style={{ paddingVertical: 32 }}>
             <ActivityIndicator color={colors.accent} />
           </View>
         ) : (
@@ -282,6 +480,7 @@ const openViewer = (post) => {
             data={posts}
             keyExtractor={(p, idx) => String(p.postid ?? idx)}
             numColumns={3}
+<<<<<<< Updated upstream
             contentContainerStyle={styles.gridContainer}
 renderItem={({ item }) => {
   const isVideo = isVideoPost(item);
@@ -299,12 +498,70 @@ renderItem={({ item }) => {
     </TouchableOpacity>
   );
 }}
+=======
+            contentContainerStyle={{
+              paddingHorizontal: 4,
+              paddingBottom: 40,
+              minHeight: 160,
+              gap: 0,
+            }}
+            columnWrapperStyle={{
+              gap: 8,
+              marginBottom: 8,
+            }}
+            renderItem={({ item }) => {
+              const isVideo = isVideoPost(item);
+              const thumb = getThumbPath(item);
+              const gridUri = isVideo
+                ? thumb
+                  ? toAbsUri(thumb)
+                  : toAbsUri(item.datapath)
+                : toAbsUri(item.datapath);
+              return (
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    aspectRatio: 4 / 5,
+                    margin: 0,
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    backgroundColor: "#181F32",
+                  }}
+                  activeOpacity={0.92}
+                  onPress={() => openViewer(item)}
+                >
+                  <Image
+                    source={{ uri: gridUri }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      aspectRatio: 4 / 5,
+                      resizeMode: "cover",
+                      borderRadius: 6,
+                      backgroundColor: "#181F32",
+                    }}
+                  />
+                </TouchableOpacity>
+              );
+            }}
+>>>>>>> Stashed changes
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             ListEmptyComponent={
+<<<<<<< Updated upstream
               <Text style={{ textAlign: "center", paddingVertical: 24, color: colors.textDim }}>
+=======
+              <Text
+                style={{
+                  textAlign: "center",
+                  paddingVertical: 32,
+                  color: colors.textDim,
+                  fontSize: 16,
+                }}
+              >
+>>>>>>> Stashed changes
                 No posts yet
               </Text>
             }
@@ -319,6 +576,7 @@ renderItem={({ item }) => {
         animationType="fade"
         transparent
       >
+<<<<<<< Updated upstream
         <View style={styles.viewerOverlay}>
           {/* Blur background at back */}
           <BlurView intensity={40} tint="dark" style={styles.viewerBlur} />
@@ -350,8 +608,308 @@ renderItem={({ item }) => {
               <Ionicons name="paper-plane-outline" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
+=======
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "#000",
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 10,
+          }}
+        >
+          <TouchableOpacity
+            onPress={closeViewer}
+            style={{
+              position: "absolute",
+              top: 32,
+              right: 22,
+              zIndex: 20,
+              backgroundColor: "rgba(0,0,0,0.5)",
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+
+          {activePost ? (
+            <View
+              style={{
+                width: "100%",
+                maxWidth: modalMaxWidth,
+                backgroundColor: "#0B1220",
+                borderRadius: 14,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.03)",
+                maxHeight: "92%",
+              }}
+            >
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* header */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 14,
+                    paddingTop: 12,
+                    paddingBottom: 8,
+                  }}
+                >
+                  <Image
+                    source={{
+                      uri: toAbsUri(
+                        activePost.profilepic ||
+                          "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                      ),
+                    }}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      marginRight: 10,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      color: "#E5E7EB",
+                      fontWeight: "bold",
+                      fontSize: 15,
+                    }}
+                  >
+                    @{activePost.postedby}
+                  </Text>
+                </View>
+
+                {/* media */}
+                <View
+                  style={{
+                    backgroundColor: "#0B1220",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    paddingVertical: 0,
+                  }}
+                >
+                  {/* Choose aspect ratio based on media type */}
+                  {isVideoPost(activePost) ? (
+                    <View
+                    style={{
+                      width: "100%",
+                      aspectRatio:
+                        modalVideoAR && modalVideoAR > 1 ? 1 : (modalVideoAR || 9 / 16),
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      backgroundColor: "#181F32",
+                      alignSelf: "center",
+                      marginBottom: 0,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                      <Media
+                        uri={toAbsUri(activePost.datapath)}
+                        isVideo={true}
+                        poster={getPoster(activePost)}
+                        size={modalMaxWidth}
+                        onAspectRatio={setModalVideoAR}
+                      />
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        width: "100%",
+                        aspectRatio: 4 / 5,
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        backgroundColor: "#181F32",
+                        alignSelf: "center",
+                        marginBottom: 0,
+                        overflow: "hidden",
+                        alignItems: "center",
+                        justifyContent: "center", 
+                      }}
+                    >
+                      <Image
+                        source={{ uri: toAbsUri(activePost.datapath) }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          aspectRatio: 4 / 5,
+                          resizeMode: "cover",
+                          borderRadius: 8,
+                          backgroundColor: "#181F32",
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* actions */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 16,
+                    paddingHorizontal: 14,
+                    paddingTop: 10,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => toggleLike(activePost.postid)}
+                    style={{ paddingVertical: 3 }}
+                  >
+                    <Ionicons
+                      name={
+                        likedPosts[activePost.postid]
+                          ? "heart"
+                          : "heart-outline"
+                      }
+                      size={26}
+                      color={
+                        likedPosts[activePost.postid]
+                          ? "#F87171"
+                          : "#E5E7EB"
+                      }
+                    />
+                  </TouchableOpacity>
+
+                  {/* comments toggle */}
+                  <TouchableOpacity
+                    onPress={() =>
+                      setViewerCommentsOpen((v) => !v)
+                    }
+                    style={{ paddingVertical: 3 }}
+                  >
+                    <Ionicons
+                      name={
+                        viewerCommentsOpen
+                          ? "chatbubble"
+                          : "chatbubble-outline"
+                      }
+                      size={24}
+                      color="#E5E7EB"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={{ paddingVertical: 3 }}>
+                    <Ionicons
+                      name="paper-plane-outline"
+                      size={23}
+                      color="#E5E7EB"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* likes + desc */}
+                <View style={{ paddingHorizontal: 14, paddingTop: 6 }}>
+                  <Text
+                    style={{
+                      color: "#E5E7EB",
+                      fontWeight: "600",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {likeCounts[activePost.postid] || 0} likes
+                  </Text>
+                  <Text style={{ color: "#E5E7EB", marginTop: 2 }}>
+                    <Text style={{ fontWeight: "bold" }}>
+                      @{activePost.postedby}{" "}
+                    </Text>
+                    {String(
+                      activePost.description ||
+                        activePost.caption ||
+                        activePost.text ||
+                        ""
+                    ).trim() || "(no description)"}
+                  </Text>
+                </View>
+
+                {/* comments (conditional) */}
+                {viewerCommentsOpen ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingTop: 10,
+                      paddingBottom: 10,
+                    }}
+                  >
+                    {activePost.comments?.length ? (
+                      activePost.comments.map((c) => (
+                        <Text
+                          key={String(c.commentid)}
+                          style={{ color: "#E5E7EB", marginBottom: 5 }}
+                        >
+                          <Text style={{ fontWeight: "bold" }}>
+                            @{c.username}{" "}
+                          </Text>
+                          {c.text}
+                        </Text>
+                      ))
+                    ) : (
+                      <Text style={{ color: "rgba(229,231,235,0.45)" }}>
+                        No comments yet.
+                      </Text>
+                    )}
+
+                    {/* add comment */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        marginTop: 10,
+                        gap: 8,
+                      }}
+                    >
+                      <TextInput
+                        value={commentText}
+                        onChangeText={setCommentText}
+                        placeholder="Add a comment…"
+                        placeholderTextColor="rgba(229,231,235,0.4)"
+                        style={{
+                          flex: 1,
+                          backgroundColor: "rgba(0,0,0,0.25)",
+                          borderWidth: 1,
+                          borderColor: "rgba(229,231,235,0.05)",
+                          borderRadius: 10,
+                          paddingHorizontal: 10,
+                          color: "#fff",
+                        }}
+                        onSubmitEditing={sendViewerComment}
+                        editable={!commentSending}
+                      />
+                      <TouchableOpacity
+                        onPress={sendViewerComment}
+                        disabled={commentSending || !commentText.trim()}
+                        style={{
+                          backgroundColor:
+                            commentSending || !commentText.trim()
+                              ? "#374151"
+                              : "#2563EB",
+                          paddingHorizontal: 14,
+                          justifyContent: "center",
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                          {commentSending ? "…" : "Send"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
+              </ScrollView>
+            </View>
+          ) : (
+            <Text style={{ color: "#fff" }}>Loading…</Text>
+          )}
+>>>>>>> Stashed changes
         </View>
       </Modal>
+      </View>
     </View>
-  );
+);
 }

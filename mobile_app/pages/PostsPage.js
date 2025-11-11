@@ -68,8 +68,13 @@ const Media = ({ uri, poster, isVideo, size }) => {
     return (
       <Image
         source={{ uri }}
-        style={{ width: size, height: size, resizeMode: "cover" }}
-      />
+        style={{
+          width: "100%",
+          aspectRatio: 4 / 5,
+          resizeMode: "cover",
+          borderRadius: 8,
+        }}
+/>
     );
   }
 
@@ -95,10 +100,12 @@ const Media = ({ uri, poster, isVideo, size }) => {
   return VideoComp ? (
     <VideoComp
       source={{ uri }}
-      style={{ width: size, height: size }}
-      resizeMode="contain"
-      posterSource={poster ? { uri: poster } : undefined}
-      useNativeControls={false}
+      style={{
+        width: "100%",
+        aspectRatio: 4 / 5,
+        borderRadius: 8,
+      }}
+      resizeMode="cover"
       shouldPlay
       isLooping
       isMuted
@@ -200,153 +207,241 @@ export default function PostsPage() {
         : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
     return (
-      <ScrollView style={[styles.app, { paddingTop: 10 }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}>
-          <TouchableOpacity onPress={goBackToFeed}>
-            <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
-          </TouchableOpacity>
-          <Image
-            source={{ uri: profilePic }}
-            style={{ width: 38, height: 38, borderRadius: 19, marginHorizontal: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
-          />
-          <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{viewingPost.postedby}</Text>
-        </View>
+      <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+        <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+          <ScrollView style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10 }}>
+              <TouchableOpacity onPress={goBackToFeed}>
+                <Ionicons name="arrow-back" size={26} color="#E5E7EB" />
+              </TouchableOpacity>
+              <Image
+                source={{ uri: profilePic }}
+                style={{ width: 38, height: 38, borderRadius: 19, marginHorizontal: 10, borderWidth: 1.5, borderColor: "#9CA3AF" }}
+              />
+              <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>@{viewingPost.postedby}</Text>
+            </View>
 
-        <View style={{ backgroundColor: "#0B1220" }}>
-          <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
-        </View>
+            {/* Media */}
+            <View style={{ backgroundColor: "#0B1220", borderRadius: 8, overflow: "hidden" }}>
+              <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={width} />
+            </View>
 
-        <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
-          <Text style={{ color: "#E5E7EB" }}>
-            <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
-            {viewingPost.description}
-          </Text>
-        </View>
-
-        <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
-          <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
-          {viewingPost.comments?.length ? (
-            viewingPost.comments.map((c) => (
-              <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
-                <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
-                {c.text}
+            <View style={{ paddingHorizontal: 14, marginTop: 8 }}>
+              <Text style={{ color: "#E5E7EB" }}>
+                <Text style={{ fontWeight: "bold" }}>@{viewingPost.postedby} </Text>
+                {viewingPost.description}
               </Text>
-            ))
-          ) : (
-            <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
-          )}
-                    {/* Commen maker */}
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 }}>
-                      <TextInput
-                        value={commentText}
-                       onChangeText={setCommentText}
-                        placeholder="Add a comment…"
-                        placeholderTextColor="#9CA3AF"
-                        onSubmitEditing={sendComment}
-                        editable={!commentSending}
-                        style={{
-                         flex: 1,
-                          color: "#E5E7EB",
-                          backgroundColor: "#0B1220",
-                          borderColor: "#1F2937",
-                          borderWidth: 1,
-                          borderRadius: 10,
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={sendComment}
-                        disabled={commentSending || !commentText.trim()}
-                        style={{
-                          backgroundColor: commentSending || !commentText.trim() ? "#374151" : "#2563EB",
-                          paddingHorizontal: 14,
-                          paddingVertical: 10,
-                          borderRadius: 10,
-                        }}
-                      >
-                        <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
-                          {commentSending ? "Sending…" : "Send"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+            </View>
+
+            <View style={{ paddingHorizontal: 14, marginTop: 18, marginBottom: 40 }}>
+              <Text style={{ color: "#9CA3AF", fontWeight: "bold", marginBottom: 8 }}>Comments</Text>
+              {viewingPost.comments?.length ? (
+                viewingPost.comments.map((c) => (
+                  <Text key={c.commentid} style={{ color: "#E5E7EB", marginBottom: 6 }}>
+                    <Text style={{ fontWeight: "bold" }}>@{c.username} </Text>
+                    {c.text}
+                  </Text>
+                ))
+              ) : (
+                <Text style={{ color: "#9CA3AF" }}>No comments yet.</Text>
+              )}
+              {/* Comment maker */}
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 8 }}>
+                <TextInput
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  placeholder="Add a comment…"
+                  placeholderTextColor="#9CA3AF"
+                  onSubmitEditing={sendComment}
+                  editable={!commentSending}
+                  style={{
+                    flex: 1,
+                    color: "#E5E7EB",
+                    backgroundColor: "#0B1220",
+                    borderColor: "#1F2937",
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={sendComment}
+                  disabled={commentSending || !commentText.trim()}
+                  style={{
+                    backgroundColor: commentSending || !commentText.trim() ? "#374151" : "#2563EB",
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                    {commentSending ? "Sending…" : "Send"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   // Main feed
   return (
-    <View style={[styles.app, { paddingTop: 10 }]}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={({ item }) => {
-            const profilePic =
-              item.profilepic && item.profilepic !== ""
-                ? toImageUri(item.profilepic)
-                : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+      <View style={{ width: "100%", maxWidth: 640, flex: 1, backgroundColor: "#0B1220" }}>
+        {loading ? (
+          <ActivityIndicator size="large" color="#60A5FA" style={{ marginTop: 40 }} />
+        ) : (
+          <FlatList
+            data={posts}
+            renderItem={({ item }) => {
+              const profilePic =
+                item.profilepic && item.profilepic !== ""
+                  ? toImageUri(item.profilepic)
+                  : "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
-            const isVideo = inferIsVideo(item);
-            const mediaUri = toImageUri(item.datapath);
-            const poster = item.thumbpath ? toImageUri(item.thumbpath) : undefined;
+              const isVideo = inferIsVideo(item);
+              const mediaUri = toImageUri(item.datapath);
+              const poster = item.thumbpath ? toImageUri(item.thumbpath) : undefined;
 
-            const isLiked = !!likedPosts[item.postid];
-            const isFollowing = !!followStatus[item.postedby];
+              const isLiked = !!likedPosts[item.postid];
+              const isFollowing = !!followStatus[item.postedby];
 
-            return (
-              <View
-                style={{
-                  backgroundColor: "#121821",
-                  marginBottom: 20,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: "#1F2937",
-                }}
-              >
-                {/* Header */}
+              return (
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
+                    backgroundColor: "#121821",
+                    marginBottom: 20,
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: "#1F2937",
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Image
-                      source={{ uri: profilePic }}
+                  {/* Header */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Image
+                        source={{ uri: profilePic }}
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          marginRight: 10,
+                          borderWidth: 1.5,
+                          borderColor: "#9CA3AF",
+                        }}
+                      />
+                      <TouchableOpacity onPress={() => console.log(`Clicked on @${item.postedby}`)}>
+                        <Text style={styles.username}>@{item.postedby}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleFollowToggle(item.postedby)}
                       style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 19,
-                        marginRight: 10,
-                        borderWidth: 1.5,
-                        borderColor: "#9CA3AF",
+                        backgroundColor: "#1F2937",
+                        paddingVertical: 5,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
                       }}
-                    />
-                    <TouchableOpacity onPress={() => console.log(`Clicked on @${item.postedby}`)}>
-                      <Text style={styles.username}>@{item.postedby}</Text>
+                    >
+                      <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
+                        {isFollowing ? "Unfollow" : "Follow"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => handleFollowToggle(item.postedby)}
+                  {/* Media (image or video) */}
+                  <View style={{ backgroundColor: "#0B1220", borderRadius: 8, overflow: "hidden" }}>
+                    <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
+                  </View>
+
+                  {/* Actions */}
+                  <View
                     style={{
-                      backgroundColor: "#1F2937",
-                      paddingVertical: 5,
-                      paddingHorizontal: 12,
-                      borderRadius: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 14,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
                     }}
                   >
-                    <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>
-                      {isFollowing ? "Unfollow" : "Follow"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity onPress={() => toggleLike(item.postid)}>
+                      <Ionicons
+                        name={isLiked ? "heart" : "heart-outline"}
+                        size={26}
+                        color={isLiked ? "#F87171" : "#E5E7EB"}
+                      />
+                    </TouchableOpacity>
 
+                    <TouchableOpacity onPress={() => handleComment(item.postid)}>
+                      <Feather name="message-circle" size={24} color="#E5E7EB" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShareTargetPost(item);
+                        setShareModalVisible(true);
+                      }}
+                    >
+                      <Feather name="send" size={22} color="#E5E7EB" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Likes + Caption */}
+                  <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+                    <Text style={{ color: "#E5E7EB", marginBottom: 3, fontWeight: "600" }}>
+                      {likeCounts[item.postid] || 0} likes
+                    </Text>
+
+                  {!!item.description && (
+                    <Text
+                      style={{
+                        color: "#E5E7EB",
+                        marginTop: 6,
+                        fontSize: 15,
+                        lineHeight: 20,
+                      }}
+                    >
+                      <Text style={{ fontWeight: "bold" }}>@{item.postedby} </Text>
+                      {item.description}
+                    </Text>
+                  )}
+
+                  </View>
+                </View>
+              );
+            }}
+            keyExtractor={(item) => String(item.postid)}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => {
+                  setRefreshing(true);
+                  load();
+                }}
+                tintColor="#fff"
+              />
+            }
+            ListEmptyComponent={
+              <Text style={{ color: "#9CA3AF", textAlign: "center", marginTop: 24 }}>
+                No posts yet.
+              </Text>
+            }
+          />
+        )}
+
+<<<<<<< Updated upstream
                 {/* Media (image or video) */}
                 <View style={{ backgroundColor: "#0B1220" }}>
                   <Media uri={mediaUri} poster={poster} isVideo={isVideo} size={imageSize} />
@@ -434,61 +529,78 @@ export default function PostsPage() {
             alignItems: "center",
             backgroundColor: "rgba(0, 0, 0, 0.7)",
           }}
+=======
+        {/* Share Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={shareModalVisible}
+          onRequestClose={() => setShareModalVisible(false)}
+>>>>>>> Stashed changes
         >
           <View
             style={{
-              backgroundColor: "#1F2937",
-              borderRadius: 12,
-              padding: 20,
-              width: "80%",
-              maxHeight: "60%",
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
             }}
           >
-            <Text
+            <View
               style={{
-                color: "#E5E7EB",
-                fontSize: 18,
-                fontWeight: "bold",
-                marginBottom: 12,
-                textAlign: "center",
+                backgroundColor: "#1F2937",
+                borderRadius: 12,
+                padding: 20,
+                width: "80%",
+                maxHeight: "60%",
               }}
             >
-              Share Post
-            </Text>
-
-            {["dylan", "journey", "hassaan", "fariza"].map((user) => (
-              <TouchableOpacity
-                key={user}
+              <Text
                 style={{
-                  paddingVertical: 10,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: "#374151",
-                }}
-                onPress={() => {
-                  console.log(`Shared post ${shareTargetPost?.postid} with ${user}`);
-                  setShareModalVisible(false);
+                  color: "#E5E7EB",
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  marginBottom: 12,
+                  textAlign: "center",
                 }}
               >
-                <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
-              </TouchableOpacity>
-            ))}
+                Share Post
+              </Text>
 
-            <TouchableOpacity
-              onPress={() => setShareModalVisible(false)}
-              style={{
-                marginTop: 20,
-                alignSelf: "center",
-                backgroundColor: "#374151",
-                paddingHorizontal: 24,
-                paddingVertical: 10,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
-            </TouchableOpacity>
+              {["dylan", "journey", "hassaan", "fariza"].map((user) => (
+                <TouchableOpacity
+                  key={user}
+                  style={{
+                    paddingVertical: 10,
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: "#374151",
+                  }}
+                  onPress={() => {
+                    console.log(`Shared post ${shareTargetPost?.postid} with ${user}`);
+                    setShareModalVisible(false);
+                  }}
+                >
+                  <Text style={{ color: "#E5E7EB", fontSize: 16 }}>@{user}</Text>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                onPress={() => setShareModalVisible(false)}
+                style={{
+                  marginTop: 20,
+                  alignSelf: "center",
+                  backgroundColor: "#374151",
+                  paddingHorizontal: 24,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#E5E7EB" }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      </View>
     </View>
   );
 }
