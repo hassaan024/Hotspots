@@ -47,14 +47,14 @@ export default function LoginPage() {
   // ----- Sign Up modal state -----
   const [showSignUp, setShowSignUp] = useState(false);
   const [suUser, setSuUser] = useState("");
-  const [suEmail, setSuEmail] = useState("");           // NEW
+  const [suEmail, setSuEmail] = useState("");           // Email (NEW)
   const [suPass, setSuPass] = useState("");
   const [suPass2, setSuPass2] = useState("");
   const [suBusy, setSuBusy] = useState(false);
   const [suError, setSuError] = useState("");
 
   // Validation rules
-  const emailLooksOk = useMemo(() => /\S@\S/.test(suEmail), [suEmail]); // minimal check
+  const emailLooksOk = useMemo(() => /\S+@\S+\.\S+/.test(suEmail), [suEmail]);
   const isSuValid = useMemo(() => {
     const u = suUser.trim();
     const okUser = u.length >= 3;
@@ -70,22 +70,42 @@ export default function LoginPage() {
   }, [suPass, suPass2]);
 
   // Slide-up animation
-  const sheetY = useRef(new Animated.Value(600)).current;
+  const sheetY = useRef(new Animated.Value(600)).current; // start off-screen
   const backdrop = useRef(new Animated.Value(0)).current;
 
   function openSignUp() {
     setShowSignUp(true);
     setSuError("");
     Animated.parallel([
-      Animated.timing(sheetY, { toValue: 0, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(backdrop, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(sheetY, {
+        toValue: 0,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdrop, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
     ]).start();
   }
 
   function closeSignUp() {
     Animated.parallel([
-      Animated.timing(sheetY, { toValue: 600, duration: 280, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(backdrop, { toValue: 0, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(sheetY, {
+        toValue: 600,
+        duration: 280,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdrop, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
     ]).start(({ finished }) => {
       if (finished) setShowSignUp(false);
     });
@@ -101,25 +121,22 @@ export default function LoginPage() {
     try {
       await new Promise((r) => setTimeout(r, 350));
 
-      // Create user in DB (username + email + password)
+      // Create user in DB with email
       const regRes = await registerUser({ username: u, email, password: suPass });
 
-      // If API returned a token or a user, try to log in seamlessly; else prefill the login form.
+      // If your API auto-auths on register and returns token/user:
       if (regRes?.token || regRes?.user) {
         try {
-          // Some APIs auto-auth on register and return token+user; your AuthContext probably expects login()
           await login(u, suPass);
         } catch {
-          // If your AuthContext login requires calling loginUser instead:
           const user = await loginUser({ username: u, password: suPass });
           await login(user.username, suPass);
         }
       } else {
-        // Prefill and close if no token returned
-        setUsername(u);
+        setUsername(u); // prefill login form
       }
 
-      // clean up and close
+      // cleanup + close
       setSuPass("");
       setSuPass2("");
       closeSignUp();
@@ -130,6 +147,7 @@ export default function LoginPage() {
     }
   }
 
+  // Reset animation positions when closed
   useEffect(() => {
     if (!showSignUp) {
       sheetY.setValue(600);
@@ -137,14 +155,66 @@ export default function LoginPage() {
     }
   }, [showSignUp, sheetY, backdrop]);
 
+  const isWeb = Platform.OS === "web";
+
   return (
-    <KeyboardAvoidingView style={styles.app} behavior={Platform.OS === "android" ? "padding" : undefined}>
-      {/* … backdrop styles unchanged … */}
+    <KeyboardAvoidingView
+      style={styles.app}
+      behavior={Platform.OS === "android" ? "padding" : undefined}
+    >
+      {/* ===== WEB Animated Gradient + Waves Backdrop (RESTORED) ===== */}
+      {isWeb && (
+        <>
+          <style>{`
+            .igwave-wrap {
+              position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+              background: linear-gradient(315deg,
+                rgba(101,0,94,1) 3%,
+                rgba(60,132,206,1) 38%,
+                rgba(48,238,226,1) 68%,
+                rgba(255,25,25,1) 98%);
+              animation: igGradient 15s ease infinite;
+              background-size: 400% 400%;
+              background-attachment: fixed;
+            }
+            @keyframes igGradient {
+              0% { background-position: 0% 0%;}
+              50% { background-position: 100% 100%;}
+              100% { background-position: 0% 0%;}
+            }
+            .igwave {
+              background: rgb(255 255 255 / 22%);
+              border-radius: 1000% 1000% 0 0;
+              position: fixed; width: 200%; height: 12em;
+              animation: igWave 10s -3s linear infinite;
+              transform: translate3d(0,0,0); opacity: 0.85; bottom: 0; left: 0; z-index: 0; filter: blur(1px);
+            }
+            .igwave:nth-of-type(2){ bottom:-1.25em; animation: igWave 18s linear reverse infinite; opacity:0.7;}
+            .igwave:nth-of-type(3){ bottom:-2.5em; animation: igWave 20s -1s reverse infinite; opacity:0.9;}
+            @keyframes igWave {
+              2% { transform: translateX(1);}
+              25% { transform: translateX(-25%);}
+              50% { transform: translateX(-50%);}
+              75% { transform: translateX(-25%);}
+              100% { transform: translateX(1);}
+            }
+            .ig-foreground { position: relative; z-index: 1;}
+          `}</style>
+          <div className="igwave-wrap">
+            <div className="igwave"></div>
+            <div className="igwave"></div>
+            <div className="igwave"></div>
+          </div>
+        </>
+      )}
 
       {/* ==== Foreground card ==== */}
       <View className="ig-foreground" style={styles.pageWrap}>
         <View style={styles.card}>
-          <View style={styles.brandRow}><Text style={styles.brandBadge}>Hotspots</Text></View>
+          <View style={styles.brandRow}>
+            <Text style={styles.brandBadge}>Hotspots</Text>
+          </View>
+
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -181,10 +251,20 @@ export default function LoginPage() {
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity onPress={handleLogin} disabled={busy} activeOpacity={0.9} style={[styles.ctaBtn, busy && styles.ctaBtnDisabled]}>
-            {busy ? <ActivityIndicator color="#1b1406" /> : <Text style={styles.ctaText}>Login</Text>}
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={busy}
+            activeOpacity={0.9}
+            style={[styles.ctaBtn, busy && styles.ctaBtnDisabled]}
+          >
+            {busy ? (
+              <ActivityIndicator color="#1b1406" />
+            ) : (
+              <Text style={styles.ctaText}>Login</Text>
+            )}
           </TouchableOpacity>
 
+          {/* Sign Up CTA */}
           <View style={styles.signupRow}>
             <Text style={styles.note}>New to Hotspots? </Text>
             <TouchableOpacity onPress={openSignUp} activeOpacity={0.85}>
@@ -195,19 +275,32 @@ export default function LoginPage() {
       </View>
 
       {/* ======= SIGN UP MODAL ======= */}
-      <Modal visible={showSignUp} animationType="none" transparent onRequestClose={closeSignUp}>
+      <Modal
+        visible={showSignUp}
+        animationType="none"
+        transparent
+        onRequestClose={closeSignUp}
+      >
         {/* Backdrop */}
         <Pressable style={styles.modalRoot} onPress={closeSignUp}>
           <Animated.View
-            style={[styles.modalBackdrop, { opacity: backdrop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) }]}
+            style={[
+              styles.modalBackdrop,
+              { opacity: backdrop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) },
+            ]}
           />
         </Pressable>
 
         {/* Bottom sheet */}
-        <Animated.View style={[styles.modalSheet, { transform: [{ translateY: sheetY }] }]}>
+        <Animated.View
+          style={[styles.modalSheet, { transform: [{ translateY: sheetY }] }]}
+        >
           <View style={styles.sheetHandle} />
+
           <Text style={styles.sheetTitle}>Create your account</Text>
-          <Text style={styles.sheetSubtitle}>Join the community and start exploring hotspots.</Text>
+          <Text style={styles.sheetSubtitle}>
+            Join the community and start exploring hotspots.
+          </Text>
 
           <View style={styles.fieldWrapAlt}>
             <Text style={styles.label}>Username</Text>
@@ -225,7 +318,7 @@ export default function LoginPage() {
 
           <View style={{ height: 10 }} />
 
-          {/* NEW: Email */}
+          {/* Email */}
           <View style={styles.fieldWrapAlt}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -238,7 +331,9 @@ export default function LoginPage() {
               style={styles.input}
               returnKeyType="next"
             />
-            {!!suEmail && !emailLooksOk && <Text style={styles.hintError}>Enter a valid email.</Text>}
+            {!!suEmail && !emailLooksOk && (
+              <Text style={styles.hintError}>Enter a valid email.</Text>
+            )}
           </View>
 
           <View style={{ height: 10 }} />
@@ -254,7 +349,9 @@ export default function LoginPage() {
               style={styles.input}
               returnKeyType="next"
             />
-            {suPass.length > 0 && suPass.length < 6 && <Text style={styles.hint}>Use at least 6 characters.</Text>}
+            {suPass.length > 0 && suPass.length < 6 && (
+              <Text style={styles.hint}>Use at least 6 characters.</Text>
+            )}
           </View>
 
           <View style={{ height: 10 }} />
@@ -271,7 +368,9 @@ export default function LoginPage() {
               returnKeyType="done"
               onSubmitEditing={handleCreateAccount}
             />
-            {mismatch && <Text style={styles.hintError}>Passwords don’t match.</Text>}
+            {mismatch && (
+              <Text style={styles.hintError}>Passwords don’t match.</Text>
+            )}
           </View>
 
           {!!suError && <Text style={styles.error}>{suError}</Text>}
@@ -282,7 +381,11 @@ export default function LoginPage() {
             activeOpacity={0.9}
             style={[styles.createBtn, (suBusy || !isSuValid) && styles.ctaBtnDisabled]}
           >
-            {suBusy ? <ActivityIndicator color="#1b1406" /> : <Text style={styles.ctaText}>Create Account</Text>}
+            {suBusy ? (
+              <ActivityIndicator color="#1b1406" />
+            ) : (
+              <Text style={styles.ctaText}>Create Account</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={closeSignUp} style={styles.sheetCancel}>
