@@ -37,18 +37,24 @@ const TOP_PREFETCH = 24;
 
 export default function SearchUser() {
   const [viewUser, setViewUser] = useState(null); // null => show search list
-  return viewUser ? (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <TouchableOpacity
-        onPress={() => setViewUser(null)}
-        style={{ padding: 12, alignSelf: "flex-start" }}
-      >
-        <Text style={{ color: "#E5E7EB" }}>← Back</Text>
-      </TouchableOpacity>
-      <ProfilePage route={{ params: { username: viewUser } }} />
+  return (
+    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
+      <View style={{ width: "100%", maxWidth: 640 }}>
+        {viewUser ? (
+          <>
+            <TouchableOpacity
+              onPress={() => setViewUser(null)}
+              style={{ padding: 12, alignSelf: "flex-start" }}
+            >
+              <Text style={{ color: "#E5E7EB" }}>← Back</Text>
+            </TouchableOpacity>
+            <ProfilePage route={{ params: { username: viewUser } }} />
+          </>
+        ) : (
+          <SearchUserList onOpenProfile={setViewUser} />
+        )}
+      </View>
     </View>
-  ) : (
-    <SearchUserList onOpenProfile={setViewUser} />
   );
 }
 
@@ -290,81 +296,83 @@ function SearchUserList({ onOpenProfile }) {
     query.trim().length === 0 ? topUsers : results;
 
   return (
-    <View style={styles.screen}>
-      {Platform.OS === "web" && (
-        <style>{`
-          @keyframes expandSearch {
-            0% { transform: scaleX(0.3); opacity: 0; }
-            60% { transform: scaleX(1.05); opacity: 1; }
-            100% { transform: scaleX(1); opacity: 1; }
-          }
-          .expandSearch {
-            animation: expandSearch .85s cubic-bezier(.65,0,.35,1);
-            transform-origin: center;
-          }
-        `}</style>
-      )}
+    <View style={[styles.screen, { alignItems: "center" }]}>
+      <View style={{ width: "100%", maxWidth: 640 }}>
+        {Platform.OS === "web" && (
+          <style>{`
+            @keyframes expandSearch {
+              0% { transform: scaleX(0.3); opacity: 0; }
+              60% { transform: scaleX(1.05); opacity: 1; }
+              100% { transform: scaleX(1); opacity: 1; }
+            }
+            .expandSearch {
+              animation: expandSearch .85s cubic-bezier(.65,0,.35,1);
+              transform-origin: center;
+            }
+          `}</style>
+        )}
 
-      {/* Search Bar */}
-      <View
-        style={styles.searchOuter}
-        className={Platform.OS === "web" && animate ? "expandSearch" : ""}
-      >
-        <LinearGradient colors={ig.borderGradientBright} style={styles.searchBorder}>
-          <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color="#b0b5bf" style={styles.searchIcon} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search by username…"
-              placeholderTextColor="#9aa0aa"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.searchInput}
-              returnKeyType="search"
-            />
-            {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery("")}>
-                <Ionicons name="close-circle" size={18} color="#9aa0aa" />
-              </TouchableOpacity>
-            )}
+        {/* Search Bar */}
+        <View
+          style={styles.searchOuter}
+          className={Platform.OS === "web" && animate ? "expandSearch" : ""}
+        >
+          <LinearGradient colors={ig.borderGradientBright} style={styles.searchBorder}>
+            <View style={styles.searchWrap}>
+              <Ionicons name="search" size={18} color="#b0b5bf" style={styles.searchIcon} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search by username…"
+                placeholderTextColor="#9aa0aa"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.searchInput}
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity onPress={() => setQuery("")}>
+                  <Ionicons name="close-circle" size={18} color="#9aa0aa" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Loading / errors / list */}
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color="#c7cad1" />
+            <Text style={styles.emptyText}>Loading users…</Text>
           </View>
-        </LinearGradient>
+        ) : loadError ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle" size={26} color="#c7cad1" />
+            <Text style={styles.emptyTitle}>Couldn’t load</Text>
+            <Text style={styles.emptyText}>{String(loadError)}</Text>
+          </View>
+        ) : listData.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="search" size={26} color="#c7cad1" />
+            <Text style={styles.emptyTitle}>
+              {query.trim().length === 0 ? "No top users yet" : "No results"}
+            </Text>
+            <Text style={styles.emptyText}>
+              {query.trim().length === 0
+                ? "Once your app has users with followers, they’ll appear here."
+                : <>No usernames matching <Text style={styles.queryEm}>{query}</Text>.</>}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={listData}
+            keyExtractor={(it) => it.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
-
-      {/* Loading / errors / list */}
-      {loading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator color="#c7cad1" />
-          <Text style={styles.emptyText}>Loading users…</Text>
-        </View>
-      ) : loadError ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="alert-circle" size={26} color="#c7cad1" />
-          <Text style={styles.emptyTitle}>Couldn’t load</Text>
-          <Text style={styles.emptyText}>{String(loadError)}</Text>
-        </View>
-      ) : listData.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="search" size={26} color="#c7cad1" />
-          <Text style={styles.emptyTitle}>
-            {query.trim().length === 0 ? "No top users yet" : "No results"}
-          </Text>
-          <Text style={styles.emptyText}>
-            {query.trim().length === 0
-              ? "Once your app has users with followers, they’ll appear here."
-              : <>No usernames matching <Text style={styles.queryEm}>{query}</Text>.</>}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={listData}
-          keyExtractor={(it) => it.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
     </View>
   );
 }

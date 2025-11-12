@@ -445,6 +445,14 @@ function FeedView({ onOpenProfile }) {
   // ===== Main feed =====
   const isFilteringAndNotReady = showFollowingOnly && !followingHydrated;
 
+  // --- Dynamic snap logic ---
+  const [avgPostHeight, setAvgPostHeight] = useState(0);
+  // Helper for averaging post heights
+  const handleLayout = useCallback((e) => {
+    const h = e.nativeEvent.layout.height;
+    setAvgPostHeight((prev) => prev ? (prev + h) / 2 : h);
+  }, []);
+
   return (
     <View style={{ flex: 1, alignItems: "center", backgroundColor: "#000" }}>
       <View style={{ width: "100%", maxWidth: FEED_MAX_WIDTH, alignSelf: "center", flex: 1, backgroundColor: "#0B1220", borderRadius: 14 }}>
@@ -478,6 +486,11 @@ function FeedView({ onOpenProfile }) {
           <FlatList
             data={filteredPosts}
             keyExtractor={(item) => String(item.postid)}
+            decelerationRate={0.985}
+            snapToAlignment="start"
+            snapToInterval={avgPostHeight || 320}
+            disableIntervalMomentum={true}
+            bounces={false}
             renderItem={({ item }) => {
               const profilePic =
                 item.profilepic && item.profilepic !== ""
@@ -493,6 +506,7 @@ function FeedView({ onOpenProfile }) {
 
               return (
                 <View
+                  onLayout={handleLayout}
                   style={{
                     backgroundColor: "#121821",
                     marginBottom: 20,
