@@ -7,8 +7,10 @@ import Navbar from "./components/Navbar";
 import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
 import LoginPage from "./pages/LoginPage";
-import ProfilePage from "./pages/ProfilePage"; // <-- Import ProfilePage
+import ProfilePage from "./pages/ProfilePage";
+
 import CreatePostPage from "./pages/createPostPage";
+import SearchUser from "./pages/SearchUserPage";
 
 
 import { styles } from "./styles";
@@ -50,6 +52,7 @@ export default function App() {
               {page === "posts" && <PostsPage />}
               {page === "createPost" && <CreatePostPage />}
               {page === "profile" && <ProfilePage />}
+              {page === "search" && <SearchUser />}
             </View>
             <Navbar current={page} onChange={setPage} />
           </>

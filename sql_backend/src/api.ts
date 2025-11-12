@@ -1,6 +1,5 @@
 const BASE = import.meta.env.VITE_API_URL;
-//This is everything that is exposed/going to be exposed to the front end
-//The actual output of the api can be seen via the api url and then going to the links shown
+//These are backend helpers
 export async function listUsers() {
   const r = await fetch(`${BASE}/api/users`, { credentials: "include" });
   if (!r.ok) throw new Error(`Users failed: ${r.status}`); 

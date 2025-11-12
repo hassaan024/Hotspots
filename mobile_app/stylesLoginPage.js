@@ -2,7 +2,7 @@ import { StyleSheet, Platform } from "react-native";
 
 export const colors = {
   bg: "#0B0A0E",
-  panel: "rgba(18,16,24,0.78)",   // glassy card
+  panel: "rgba(18,16,24,0.78)", // glassy card
   panelBorder: "#2A1E33",
   text: "#F5F6F8",
   textDim: "#B6BAC4",
@@ -12,6 +12,11 @@ export const colors = {
   accent: "#ffc300",
   accentGlow: "#ffdf9e",
   btnBg: "#1A1722",
+
+  // modal
+  sheet: "rgba(16,13,22,0.95)",
+  sheetBorder: "rgba(255,255,255,0.08)",
+  backdrop: "rgba(0,0,0,0.45)",
 };
 
 const radius = 18;
@@ -41,8 +46,6 @@ export const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: colors.panel,
     overflow: "hidden",
-
-    // shadow + glow for 3D feel
     ...Platform.select({
       ios: {
         shadowColor: colors.accentGlow,
@@ -52,20 +55,6 @@ export const styles = StyleSheet.create({
       },
       android: { elevation: 6 },
     }),
-  },
-
-  /** ===== Gloss Layer (pseudo-light reflection) ===== */
-  gloss: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    opacity: 0.3,
-    borderTopLeftRadius: radius,
-    borderTopRightRadius: radius,
-    transform: [{ skewY: "-6deg" }],
   },
 
   brandRow: {
@@ -83,11 +72,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "#FF7A00", // fallback for Android
     backgroundImage:
       "linear-gradient(90deg, #FF7A00, #FF0069, #D300C5, #7638FA)",
-      // shadowColor: "#FF7A00",
-      // shadowOpacity: 0.6,
-      // shadowRadius: 18,
-      // shadowOffset: { width: 0, height: 6 },
-
   },
 
   title: {
@@ -134,7 +118,19 @@ export const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  /** ===== Login Button (Neon Gradient Glow) ===== */
+  // helpful hints
+  hint: {
+    marginTop: 6,
+    color: "#d6d3d1",
+    fontSize: 12,
+  },
+  hintError: {
+    marginTop: 6,
+    color: "#fca5a5",
+    fontSize: 12,
+  },
+
+  /** ===== Primary Buttons (Neon Gradient Glow) ===== */
   ctaBtn: {
     marginTop: 22,
     alignItems: "center",
@@ -143,20 +139,10 @@ export const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     position: "relative",
-
-    // Add soft outer glow
-    // shadowColor: "#FF7A00",
-    // shadowOpacity: 0.6,
-    // shadowRadius: 18,
-    // shadowOffset: { width: 0, height: 6 },
-
-    // Use a background gradient look
-    backgroundColor: "#FF7A00", // fallback for Android
+    backgroundColor: "#FF7A00", // fallback
     backgroundImage:
       "linear-gradient(90deg, #FFD600, #FF7A00, #FF0069, #D300C5, #7638FA)",
     borderWidth: 1,
-    // borderColor: "rgba(255,255,255,0.2)",
-
     ...Platform.select({
       ios: {
         shadowColor: "#FF7A00",
@@ -167,6 +153,9 @@ export const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
+  ctaBtnDisabled: {
+    opacity: 0.55,
+  },
   ctaText: {
     color: "#ffffff",
     fontWeight: "800",
@@ -176,14 +165,108 @@ export const styles = StyleSheet.create({
     textShadowRadius: 5,
   },
 
-  note: {
-    textAlign: "center",
-    color: colors.textDim,
-    marginTop: 14,
-    fontSize: 12,
+  // ----- Sign up row -----
+  signupRow: {
+    marginTop: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  link: {
-    color: colors.accent,
+  note: {
+    color: colors.textDim,
+    fontSize: 13,
+  },
+  signupLink: {
+    color: "#FFD600",
+    fontWeight: "800",
+    textDecorationLine: "underline",
+  },
+
+  // ===== Modal / Bottom Sheet =====
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.backdrop,
+  },
+  modalSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 26,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: colors.sheet,
+    borderTopWidth: 1,
+    borderColor: colors.sheetBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 22,
+        shadowOffset: { width: 0, height: -8 },
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    marginBottom: 10,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: colors.textDim,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+
+  fieldWrapAlt: {
+    backgroundColor: "rgba(20,18,25,0.9)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+
+  createBtn: {
+    marginTop: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#FF7A00",
+    backgroundImage:
+      "linear-gradient(90deg, #FFD600, #FF7A00, #FF0069, #D300C5, #7638FA)",
+    borderWidth: 1,
+  },
+
+  sheetCancel: {
+    alignSelf: "center",
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  sheetCancelText: {
+    color: colors.textDim,
     fontWeight: "700",
+    fontSize: 13,
   },
 });
