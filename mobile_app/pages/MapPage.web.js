@@ -229,6 +229,35 @@ function MapInner({ onOpenProfile }) {
   const [commentText, setCommentText] = useState("");
   const [commentSending, setCommentSending] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
+// put near top of MapPage.js
+const DARK_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4b6878" }] },
+  { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#64779e" }] },
+  { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#4b6878" }] },
+  { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: "#334e87" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#023e58" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#283d6a" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6f9ba5" }] },
+  { featureType: "poi", elementType: "labels.text.stroke", stylers: [{ color: "#1d2c4d" }] },
+  { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#023e58" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#3C7680" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#304a7d" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#98a5be" }] },
+  { featureType: "road", elementType: "labels.text.stroke", stylers: [{ color: "#1d2c4d" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#2c6675" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#255763" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#b0d5ce" }] },
+  { featureType: "road.highway", elementType: "labels.text.stroke", stylers: [{ color: "#023e58" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#98a5be" }] },
+  { featureType: "transit", elementType: "labels.text.stroke", stylers: [{ color: "#1d2c4d" }] },
+  { featureType: "transit.line", elementType: "geometry.fill", stylers: [{ color: "#283d6a" }] },
+  { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#3a4762" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4e6d70" }] },
+];
 
   useEffect(() => installAudioUnlockOnce(), []);
   useEffect(() => {
@@ -267,6 +296,10 @@ function MapInner({ onOpenProfile }) {
 
         setLoadingMaps(false);
         const { Map } = google.maps;
+        let ColorScheme;
+        try {
+          ({ ColorScheme } = await google.maps.importLibrary("core"));
+        } catch {}
         let AdvancedMarkerElement =
           google.maps.marker && google.maps.marker.AdvancedMarkerElement
             ? google.maps.marker.AdvancedMarkerElement
@@ -277,16 +310,19 @@ function MapInner({ onOpenProfile }) {
         }
         if (!Map || !AdvancedMarkerElement) throw new Error("Google Maps libraries not ready");
 
-        const map = new Map(mapRef.current, {
-          center: Uluru,
-          zoom: 6,
-          mapId: MAP_ID,
-          gestureHandling: "greedy",
-          disableDefaultUI: true,
-          zoomControl: true,
-          fullscreenControl: false,
-          mapTypeControl: false,
-        });
+const map = new Map(mapRef.current, {
+  center: Uluru,
+  zoom: 6,
+  mapId: MAP_ID,                  // keep if this ID is a dark style; otherwise it’s fine too
+  colorScheme: ColorScheme?.DARK, // uses dark tokens if your map style supports them
+  styles: DARK_STYLES,            // hard-forces a dark look even if mapId is light
+  backgroundColor: "#000000",
+  gestureHandling: "greedy",
+  disableDefaultUI: true,
+  zoomControl: true,
+  fullscreenControl: false,
+  mapTypeControl: false,
+});
         mapInstanceRef.current = map;
 
         // Heatmap
