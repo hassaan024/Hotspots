@@ -200,17 +200,19 @@ const Media = ({ uri, isVideo, poster, size, onAspectRatio }) => {
     </TouchableOpacity>
   ) : null;
 };
-
-export default function ProfilePage() {
-  const { logout, user: authUser } = useContext(AuthContext);
-
+export default function ProfilePage({ route }) {
+const { logout, user: authUser } = useContext(AuthContext);
+const viewedUsername = route?.params?.username ?? authUser?.username;
+const isSelf = viewedUsername === authUser?.username;
   const user = useMemo(
     () => ({
-      username: authUser?.username,
-      avatar: authUser?.avatar ?? "https://placehold.co/200x200/png",
+      username: viewedUsername,
+      // If you're not storing other users' avatars yet, keep a safe default.
+      avatar: isSelf ? (authUser?.avatar ?? "https://placehold.co/200x200/png")
+                     : "https://placehold.co/200x200/png",
       postsCount: 0,
     }),
-    [authUser]
+    [authUser, viewedUsername, isSelf]
   );
 
   const [posts, setPosts] = useState([]);
@@ -407,18 +409,14 @@ export default function ProfilePage() {
           >
             {user.username}
           </Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#181F32",
-              borderRadius: 8,
-              paddingHorizontal: 16,
-              paddingVertical: 7,
-              marginLeft: 10,
-            }}
-            onPress={logout}
-          >
-            <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>Logout</Text>
-          </TouchableOpacity>
+ {isSelf ? (
+   <TouchableOpacity
+     style={{ backgroundColor: "#181F32", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 7, marginLeft: 10 }}
+     onPress={logout}
+   >
+     <Text style={{ color: "#E5E7EB", fontWeight: "bold" }}>Logout</Text>
+   </TouchableOpacity>
+ ) : null}
         </View>
       </View>
 

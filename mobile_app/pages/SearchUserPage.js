@@ -1,5 +1,5 @@
 // SearchUser.js
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,89 +8,258 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { styles, ig } from "../stylesSearchUserPage";
+import ProfilePage from "./ProfilePage";
+import { listUsers, getFollowCounts, API_BASE } from "../components/api";
 
-const DUMMY_USERS = [
-  {
-    id: "1",
-    username: "hassaan",
-    avatar:
-      "https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=256&auto=format&fit=crop",
-    followers: 1203,
-    following: 381,
-  },
-  {
-    id: "2",
-    username: "dev_amy",
-    avatar:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=256&auto=format&fit=crop",
-    followers: 980,
-    following: 210,
-  },
-  {
-    id: "3",
-    username: "mike42",
-    avatar:
-      "https://images.unsplash.com/photo-1506898665064-7b6a174f3f1f?q=80&w=256&auto=format&fit=crop",
-    followers: 240,
-    following: 75,
-  },
-  {
-    id: "4",
-    username: "sana.codes",
-    avatar:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2c?q=80&w=256&auto=format&fit=crop",
-    followers: 4205,
-    following: 801,
-  },
-  {
-    id: "5",
-    username: "pk_dev",
-    avatar:
-      "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=256&auto=format&fit=crop",
-    followers: 333,
-    following: 190,
-  },
-];
+// normalize possible relative avatar paths to absolute URLs
+function toAbsUri(path) {
+  if (!path) return null;
+  const s = String(path);
+  if (/^https?:\/\//i.test(s)) return s;
+  const base = (API_BASE || "").replace(/\/$/, "");
+  if (s.startsWith("/")) return `${base}${s}`;
+  return `${base}/uploads/${s.replace(/^\.?\//, "")}`;
+}
+
+function formatNum(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
+
+// How many users to prefetch counts for ranking "Top users"
+const TOP_PREFETCH = 24;
 
 export default function SearchUser() {
+  const [viewUser, setViewUser] = useState(null); // null => show search list
+  return viewUser ? (
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      <TouchableOpacity
+        onPress={() => setViewUser(null)}
+        style={{ padding: 12, alignSelf: "flex-start" }}
+      >
+        <Text style={{ color: "#E5E7EB" }}>← Back</Text>
+      </TouchableOpacity>
+      <ProfilePage route={{ params: { username: viewUser } }} />
+    </View>
+  ) : (
+    <SearchUserList onOpenProfile={setViewUser} />
+  );
+}
+
+function SearchUserList({ onOpenProfile }) {
   const [query, setQuery] = useState("");
   const [animate, setAnimate] = useState(true);
 
+  const [users, setUsers] = useState([]); // [{id, username, avatar, followers?, following?}]
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // countsMap: { username: { followers, following } }
+  const [countsMap, setCountsMap] = useState({});
+
   useEffect(() => {
-    const timer = setTimeout(() => setAnimate(false), 900);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setAnimate(false), 900);
+    return () => clearTimeout(t);
   }, []);
 
+  // fetch user directory
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await listUsers();
+        if (cancelled) return;
+
+        const normalized = (Array.isArray(data) ? data : []).map((u) => {
+          const username = String(u.username ?? "").trim();
+          const followers = u.followersCount ?? u.followers;
+          const following = u.followingCount ?? u.following;
+          // pre-seed countsMap if API already gave us numbers
+          if (
+            username &&
+            (Number.isFinite(Number(followers)) ||
+              Number.isFinite(Number(following)))
+          ) {
+            // stage into a local map; we’ll batch-set once
+          }
+          return {
+            id: String(u.userid ?? u.id ?? username),
+            username,
+            avatar:
+              toAbsUri(u.profilepic) ||
+              "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+            followers:
+              Number.isFinite(Number(followers)) ? Number(followers) : null,
+            following:
+              Number.isFinite(Number(following)) ? Number(following) : null,
+          };
+        });
+
+        // seed countsMap from API-provided fields
+        const seed = {};
+        for (const u of normalized) {
+          if (u.username) {
+            const f1 = Number.isFinite(u.followers) ? u.followers : null;
+            const f2 = Number.isFinite(u.following) ? u.following : null;
+            if (f1 !== null || f2 !== null) {
+              seed[u.username] = {
+                followers: f1 ?? 0,
+                following: f2 ?? 0,
+              };
+            }
+          }
+        }
+
+        setUsers(normalized);
+        if (Object.keys(seed).length) {
+          setCountsMap((prev) => ({ ...seed, ...prev }));
+        }
+      } catch (e) {
+        setLoadError(e?.message || "Failed to load users");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // helper: ensure we have counts for a set of usernames
+  const ensureCounts = useCallback(async (usernames) => {
+    const need = usernames.filter(
+      (u) => u && !countsMap[u] // only fetch missing
+    );
+    if (!need.length) return;
+
+    // Limit concurrency a bit
+    const chunk = async (arr, size) => {
+      for (let i = 0; i < arr.length; i += size) {
+        const slice = arr.slice(i, i + size);
+        const results = await Promise.allSettled(
+          slice.map(async (uname) => {
+            try {
+              const { followers, following } = await getFollowCounts(uname);
+              return { uname, followers, following };
+            } catch {
+              return { uname, followers: 0, following: 0 };
+            }
+          })
+        );
+        const add = {};
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value?.uname) {
+            const { uname, followers, following } = r.value;
+            add[uname] = {
+              followers: Number(followers) || 0,
+              following: Number(following) || 0,
+            };
+          } else if (r.status === "rejected") {
+            // ignore; keep missing
+          }
+        }
+        if (Object.keys(add).length) {
+          setCountsMap((prev) => ({ ...prev, ...add }));
+        }
+      }
+    };
+
+    await chunk(need, 6); // 6 concurrent lookups at a time
+  }, [countsMap]);
+
+  // build the display rows with counts (from API fields or countsMap)
+  const decorate = useCallback(
+    (arr) =>
+      arr.map((u) => {
+        const counts = countsMap[u.username];
+        return {
+          ...u,
+          followers:
+            counts?.followers ??
+            (Number.isFinite(u.followers) ? u.followers : 0),
+          following:
+            counts?.following ??
+            (Number.isFinite(u.following) ? u.following : 0),
+        };
+      }),
+    [countsMap]
+  );
+
+  // results when searching
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return DUMMY_USERS.filter((u) => u.username.toLowerCase().includes(q));
-  }, [query]);
+    const filtered = users.filter((u) =>
+      u.username.toLowerCase().includes(q)
+    );
+    return decorate(filtered);
+  }, [query, users, decorate]);
+
+  // "Top users" when query is empty — rank by followers desc
+  const topUsers = useMemo(() => {
+    if (query.trim().length > 0) return [];
+    const decorated = decorate(users);
+    const withCounts = decorated.filter((u) => Number.isFinite(u.followers));
+    const withoutCounts = decorated.filter((u) => !Number.isFinite(u.followers));
+
+    // sort those with counts first
+    withCounts.sort((a, b) => (b.followers || 0) - (a.followers || 0));
+    // keep users w/o counts at the end (stable)
+    return [...withCounts, ...withoutCounts].slice(0, TOP_PREFETCH);
+  }, [users, query, decorate]);
+
+  // Prefetch counts for: (a) top users, and (b) visible search results
+  useEffect(() => {
+    if (query.trim().length === 0 && topUsers.length) {
+      const names = topUsers.map((u) => u.username).filter(Boolean);
+      ensureCounts(names);
+    }
+  }, [query, topUsers, ensureCounts]);
+
+  useEffect(() => {
+    if (query.trim().length > 0 && results.length) {
+      const names = results.slice(0, 20).map((u) => u.username).filter(Boolean);
+      ensureCounts(names);
+    }
+  }, [query, results, ensureCounts]);
 
   const renderItem = ({ item }) => (
     <View style={styles.frameOuter}>
       <LinearGradient colors={ig.borderGradientSoft} style={styles.frameGradient}>
         <View style={styles.card}>
           <View style={styles.cardRow}>
-            {/* Avatar wrapper ensures circle shape */}
-            <View style={styles.avatarWrap}>
+            {/* Avatar */}
+            <TouchableOpacity
+              style={styles.avatarWrap}
+              onPress={() => onOpenProfile(item.username)}
+            >
               <Image source={{ uri: item.avatar }} style={styles.avatar} />
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.cardCenter}>
-              <Text style={styles.usernameBig}>@{item.username}</Text>
+              <Text
+                style={styles.usernameBig}
+                onPress={() => onOpenProfile(item.username)}
+              >
+                @{item.username}
+              </Text>
               <View style={styles.metaRow}>
                 <Text style={styles.meta}>
-                  <Text style={styles.metaStrong}>{formatNum(item.followers)}</Text>{" "}
+                  <Text style={styles.metaStrong}>{formatNum(item.followers || 0)}</Text>{" "}
                   followers
                 </Text>
                 <View style={styles.metaDot} />
                 <Text style={styles.meta}>
-                  <Text style={styles.metaStrong}>{formatNum(item.following)}</Text>{" "}
+                  <Text style={styles.metaStrong}>{formatNum(item.following || 0)}</Text>{" "}
                   following
                 </Text>
               </View>
@@ -99,10 +268,7 @@ export default function SearchUser() {
             <TouchableOpacity
               style={styles.profileBtn}
               activeOpacity={0.9}
-              onPress={() => {
-                // TODO: route to profile page here
-                // navigation.navigate("Profile", { username: item.username });
-              }}
+              onPress={() => onOpenProfile(item.username)}
             >
               <LinearGradient
                 colors={ig.buttonGradientIG}
@@ -119,6 +285,9 @@ export default function SearchUser() {
       </LinearGradient>
     </View>
   );
+
+  const listData =
+    query.trim().length === 0 ? topUsers : results;
 
   return (
     <View style={styles.screen}>
@@ -143,12 +312,7 @@ export default function SearchUser() {
       >
         <LinearGradient colors={ig.borderGradientBright} style={styles.searchBorder}>
           <View style={styles.searchWrap}>
-            <Ionicons
-              name="search"
-              size={18}
-              color="#b0b5bf"
-              style={styles.searchIcon}
-            />
+            <Ionicons name="search" size={18} color="#b0b5bf" style={styles.searchIcon} />
             <TextInput
               value={query}
               onChangeText={setQuery}
@@ -168,28 +332,33 @@ export default function SearchUser() {
         </LinearGradient>
       </View>
 
-      {/* Results */}
-      {query.length === 0 ? (
+      {/* Loading / errors / list */}
+      {loading ? (
         <View style={styles.emptyState}>
-          <Ionicons
-            name={Platform.OS === "ios" ? "sparkles" : "sparkles-outline"}
-            size={28}
-            color="#c7cad1"
-          />
-          <Text style={styles.emptyTitle}>Find people</Text>
-          <Text style={styles.emptyText}>Type a username to discover profiles.</Text>
+          <ActivityIndicator color="#c7cad1" />
+          <Text style={styles.emptyText}>Loading users…</Text>
         </View>
-      ) : results.length === 0 ? (
+      ) : loadError ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="alert-circle" size={26} color="#c7cad1" />
+          <Text style={styles.emptyTitle}>Couldn’t load</Text>
+          <Text style={styles.emptyText}>{String(loadError)}</Text>
+        </View>
+      ) : listData.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="search" size={26} color="#c7cad1" />
-          <Text style={styles.emptyTitle}>No results</Text>
+          <Text style={styles.emptyTitle}>
+            {query.trim().length === 0 ? "No top users yet" : "No results"}
+          </Text>
           <Text style={styles.emptyText}>
-            No usernames matching <Text style={styles.queryEm}>{query}</Text>.
+            {query.trim().length === 0
+              ? "Once your app has users with followers, they’ll appear here."
+              : <>No usernames matching <Text style={styles.queryEm}>{query}</Text>.</>}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={results}
+          data={listData}
           keyExtractor={(it) => it.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
@@ -198,10 +367,4 @@ export default function SearchUser() {
       )}
     </View>
   );
-}
-
-function formatNum(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
-  return String(n);
 }

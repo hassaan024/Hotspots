@@ -8,6 +8,7 @@ import MapPage from "./pages/MapPage";
 import PostsPage from "./pages/PostsPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
+
 import CreatePostPage from "./pages/createPostPage";
 import SearchUser from "./pages/SearchUserPage";
 
