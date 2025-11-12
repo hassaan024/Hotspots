@@ -308,3 +308,42 @@ export async function setFollow(username, follow) {
   if (!r.ok) throw new Error(`follow failed: ${r.status}`);
   return r.json(); // { user, followed, followers, following }
 }
+// components/api.js
+export async function registerUser({ username, email, password }) {
+  const payload = { username, email, password };
+
+  // try /register first, then fallback to /api/users
+  async function attempt(url) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const ctype = r.headers.get("content-type") || "";
+    const text = await r.text().catch(() => "");
+    if (!ctype.includes("application/json")) {
+      throw new Error(`Register expected JSON but got ${ctype}. Starts with: ${text.slice(0, 120)}`);
+    }
+    if (!r.ok) {
+      throw new Error(`Register failed ${r.status}: ${text.slice(0, 180)}`);
+    }
+
+    const data = JSON.parse(text);
+    // Optional shape: { user, token } or just { user } or { id, username, email, ... }
+    if (data?.token) setAuthToken(data.token);
+    return data.user ?? data;
+  }
+
+  const base = `${API_BASE}/api/users`;
+  try {
+    return await attempt(`${base}/register`); // preferred
+  } catch (e) {
+    // fallback on 404/405 only; otherwise rethrow
+    if (String(e.message).includes(" 404") || String(e.message).includes(" 405")) {
+      return await attempt(base); // many APIs use POST /api/users to create
+    }
+    throw e;
+  }
+}
+
